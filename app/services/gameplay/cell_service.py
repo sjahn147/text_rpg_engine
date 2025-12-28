@@ -48,6 +48,7 @@ class CellService(BaseGameplayService):
                         c.cell_id,
                         c.cell_name,
                         c.cell_description as description,
+                        c.cell_properties,
                         l.location_name,
                         r.region_name
                     FROM game_data.world_cells c
@@ -64,11 +65,29 @@ class CellService(BaseGameplayService):
                 if not cell_data:
                     raise ValueError("셀 데이터를 찾을 수 없습니다.")
             
-            # 연결된 셀 조회
+            # 연결된 셀 조회 (cell_properties에서)
             connected_cells = []
-            # TODO: 연결된 셀 정보 조회 로직 구현
+            cell_properties = cell_data.get('cell_properties')
+            if cell_properties:
+                if isinstance(cell_properties, str):
+                    import json
+                    cell_properties = json.loads(cell_properties)
+                connected_cells = cell_properties.get('connected_cells', [])
             
-            # 응답 구성
+            # 응답 구성 (objects에 object_id 추가 및 interaction_type 보장)
+            objects = cell_contents.get('objects', [])
+            for obj in objects:
+                # object_id를 runtime_object_id로 설정 (프론트엔드 호환성)
+                if 'object_id' not in obj:
+                    obj['object_id'] = obj.get('runtime_object_id', obj.get('game_object_id', ''))
+                
+                # interaction_type이 properties에 없으면 최상위 레벨에서 가져오기
+                if 'interaction_type' not in obj.get('properties', {}):
+                    if 'interaction_type' in obj:
+                        if 'properties' not in obj:
+                            obj['properties'] = {}
+                        obj['properties']['interaction_type'] = obj['interaction_type']
+            
             cell_info = {
                 "cell_id": current_cell_id,
                 "cell_name": cell_data['cell_name'],
@@ -76,7 +95,7 @@ class CellService(BaseGameplayService):
                 "location_name": cell_data['location_name'],
                 "region_name": cell_data['region_name'],
                 "entities": cell_contents.get('entities', []),
-                "objects": cell_contents.get('objects', []),
+                "objects": objects,
                 "connected_cells": connected_cells,
             }
             

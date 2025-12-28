@@ -7,6 +7,7 @@ import uuid
 from app.core.game_session import GameSession
 from app.services.gameplay.base_service import BaseGameplayService
 from common.utils.logger import logger
+from app.handlers.action_result import ActionType
 
 
 class InteractionService(BaseGameplayService):
@@ -241,14 +242,119 @@ class InteractionService(BaseGameplayService):
             self.logger.error(f"오브젝트 상호작용 실패: {str(e)}")
             raise
     
+    async def get_object_contents(
+        self,
+        session_id: str,
+        object_id: str
+    ) -> Dict[str, Any]:
+        """
+        오브젝트의 contents 조회
+        
+        Returns:
+            {
+                "success": bool,
+                "contents": List[str],
+                "object_name": str
+            }
+        """
+        try:
+            session = GameSession(session_id)
+            player_entities = await session.get_player_entities()
+            
+            if not player_entities:
+                raise ValueError("세션을 찾을 수 없습니다.")
+            
+            # current_position JSONB에서 runtime_cell_id 추출
+            current_position = player_entities[0].get('current_position', {})
+            if isinstance(current_position, str):
+                current_position = json.loads(current_position)
+            current_cell_id = current_position.get('runtime_cell_id')
+            
+            if not current_cell_id:
+                raise ValueError("현재 셀을 찾을 수 없습니다.")
+            
+            # 현재 셀의 오브젝트 목록 조회
+            cell_contents = await self.cell_manager.get_cell_contents(current_cell_id)
+            
+            # 요청한 오브젝트 찾기
+            target_object = None
+            for obj in cell_contents.get('objects', []):
+                if (obj.get('runtime_object_id') == object_id or 
+                    obj.get('game_object_id') == object_id):
+                    target_object = obj
+                    break
+            
+            if not target_object:
+                raise ValueError("오브젝트를 찾을 수 없습니다.")
+            
+            # 오브젝트 상태 조회
+            runtime_object_id = target_object.get('runtime_object_id')
+            game_object_id = target_object.get('game_object_id')
+            
+            if not runtime_object_id or not game_object_id:
+                raise ValueError("오브젝트 ID를 찾을 수 없습니다.")
+            
+            # ObjectStateManager에서 contents 조회
+            state_result = await self.object_state_manager.get_object_state(
+                runtime_object_id=runtime_object_id,
+                game_object_id=game_object_id,
+                session_id=session_id
+            )
+            
+            if not state_result.success:
+                raise ValueError(state_result.message)
+            
+            object_state = state_result.object_state
+            properties = object_state.get('properties', {})
+            contents = properties.get('contents', [])
+            
+            # 아이템 정보 조회
+            items_info = []
+            for item_id in contents:
+                item_template = await self.game_data_repo.get_item(item_id)
+                item_name = item_id
+                if item_template:
+                    base_property_id = item_template.get('base_property_id')
+                    if base_property_id:
+                        pool = await self.db.pool
+                        async with pool.acquire() as conn:
+                            bp_row = await conn.fetchrow(
+                                """
+                                SELECT name FROM game_data.base_properties WHERE property_id = $1
+                                """,
+                                base_property_id
+                            )
+                            if bp_row:
+                                item_name = bp_row['name']
+                
+                items_info.append({
+                    "item_id": item_id,
+                    "name": item_name
+                })
+            
+            return {
+                "success": True,
+                "contents": items_info,
+                "object_name": object_state.get('object_name', '오브젝트')
+            }
+            
+        except Exception as e:
+            self.logger.error(f"오브젝트 contents 조회 실패: {str(e)}")
+            raise
+    
     async def pickup_from_object(
         self,
         session_id: str,
         object_id: str,
-        item_id: str
+        item_id: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         오브젝트에서 아이템 획득
+        
+        Args:
+            session_id: 세션 ID
+            object_id: 오브젝트 ID
+            item_id: 아이템 ID (None이면 첫 번째 아이템)
         
         Returns:
             {
@@ -265,6 +371,13 @@ class InteractionService(BaseGameplayService):
                 raise ValueError("세션을 찾을 수 없습니다.")
             
             player_id = player_entities[0]['runtime_entity_id']
+            
+            # item_id가 없으면 오브젝트의 첫 번째 아이템 사용
+            if not item_id:
+                contents_result = await self.get_object_contents(session_id, object_id)
+                if not contents_result['success'] or len(contents_result['contents']) == 0:
+                    raise ValueError("오브젝트에 아이템이 없습니다.")
+                item_id = contents_result['contents'][0]['item_id']
             
             # ActionHandler를 통한 pickup 처리
             result = await self.action_handler.execute_action(
@@ -344,5 +457,200 @@ class InteractionService(BaseGameplayService):
             
         except Exception as e:
             self.logger.error(f"아이템 조합 실패: {str(e)}")
+            raise
+    
+    async def use_item(
+        self,
+        session_id: str,
+        item_id: str
+    ) -> Dict[str, Any]:
+        """아이템 사용"""
+        try:
+            session = GameSession(session_id)
+            player_entities = await session.get_player_entities()
+            
+            if not player_entities:
+                raise ValueError("세션을 찾을 수 없습니다.")
+            
+            player_id = player_entities[0]['runtime_entity_id']
+            
+            # ActionHandler로 처리
+            result = await self.action_handler.execute_action(
+                entity_id=player_id,
+                action_type=ActionType.USE_ITEM,
+                target_id=None,
+                parameters={
+                    "session_id": session_id,
+                    "item_id": item_id
+                }
+            )
+            
+            if not result.success:
+                raise ValueError(result.message)
+            
+            return {
+                "success": True,
+                "message": result.message,
+                "result": result.data or {}
+            }
+            
+        except Exception as e:
+            self.logger.error(f"아이템 사용 실패: {str(e)}")
+            raise
+    
+    async def eat_item(
+        self,
+        session_id: str,
+        item_id: str
+    ) -> Dict[str, Any]:
+        """아이템 먹기"""
+        try:
+            session = GameSession(session_id)
+            player_entities = await session.get_player_entities()
+            
+            if not player_entities:
+                raise ValueError("세션을 찾을 수 없습니다.")
+            
+            player_id = player_entities[0]['runtime_entity_id']
+            
+            # ActionHandler로 처리
+            result = await self.action_handler.execute_action(
+                entity_id=player_id,
+                action_type=ActionType.EAT_ITEM,
+                target_id=None,
+                parameters={
+                    "session_id": session_id,
+                    "item_id": item_id
+                }
+            )
+            
+            if not result.success:
+                raise ValueError(result.message)
+            
+            return {
+                "success": True,
+                "message": result.message,
+                "result": result.data or {}
+            }
+            
+        except Exception as e:
+            self.logger.error(f"아이템 먹기 실패: {str(e)}")
+            raise
+    
+    async def equip_item(
+        self,
+        session_id: str,
+        item_id: str
+    ) -> Dict[str, Any]:
+        """아이템 장착"""
+        try:
+            session = GameSession(session_id)
+            player_entities = await session.get_player_entities()
+            
+            if not player_entities:
+                raise ValueError("세션을 찾을 수 없습니다.")
+            
+            player_id = player_entities[0]['runtime_entity_id']
+            
+            # ActionHandler로 처리
+            result = await self.action_handler.execute_action(
+                entity_id=player_id,
+                action_type=ActionType.EQUIP_ITEM,
+                target_id=None,
+                parameters={
+                    "session_id": session_id,
+                    "item_id": item_id
+                }
+            )
+            
+            if not result.success:
+                raise ValueError(result.message)
+            
+            return {
+                "success": True,
+                "message": result.message,
+                "result": result.data or {}
+            }
+            
+        except Exception as e:
+            self.logger.error(f"아이템 장착 실패: {str(e)}")
+            raise
+    
+    async def unequip_item(
+        self,
+        session_id: str,
+        item_id: str
+    ) -> Dict[str, Any]:
+        """아이템 해제"""
+        try:
+            session = GameSession(session_id)
+            player_entities = await session.get_player_entities()
+            
+            if not player_entities:
+                raise ValueError("세션을 찾을 수 없습니다.")
+            
+            player_id = player_entities[0]['runtime_entity_id']
+            
+            # ActionHandler로 처리
+            result = await self.action_handler.execute_action(
+                entity_id=player_id,
+                action_type=ActionType.UNEQUIP_ITEM,
+                target_id=None,
+                parameters={
+                    "session_id": session_id,
+                    "item_id": item_id
+                }
+            )
+            
+            if not result.success:
+                raise ValueError(result.message)
+            
+            return {
+                "success": True,
+                "message": result.message,
+                "result": result.data or {}
+            }
+            
+        except Exception as e:
+            self.logger.error(f"아이템 해제 실패: {str(e)}")
+            raise
+    
+    async def drop_item(
+        self,
+        session_id: str,
+        item_id: str
+    ) -> Dict[str, Any]:
+        """아이템 버리기"""
+        try:
+            session = GameSession(session_id)
+            player_entities = await session.get_player_entities()
+            
+            if not player_entities:
+                raise ValueError("세션을 찾을 수 없습니다.")
+            
+            player_id = player_entities[0]['runtime_entity_id']
+            
+            # ActionHandler로 처리
+            result = await self.action_handler.execute_action(
+                entity_id=player_id,
+                action_type=ActionType.DROP_ITEM,
+                target_id=None,
+                parameters={
+                    "session_id": session_id,
+                    "item_id": item_id
+                }
+            )
+            
+            if not result.success:
+                raise ValueError(result.message)
+            
+            return {
+                "success": True,
+                "message": result.message,
+                "result": result.data or {}
+            }
+            
+        except Exception as e:
+            self.logger.error(f"아이템 버리기 실패: {str(e)}")
             raise
 

@@ -2,7 +2,7 @@
 게임플레이 API 라우트 (리팩토링 버전)
 """
 from typing import Optional, List
-from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi import APIRouter, HTTPException, status, Depends, Query
 from pydantic import BaseModel
 from app.services.gameplay import (
     GameService,
@@ -104,11 +104,15 @@ class InteractObjectRequest(BaseModel):
 class PickupFromObjectRequest(BaseModel):
     session_id: str
     object_id: str
-    item_id: str
+    item_id: Optional[str] = None  # None이면 첫 번째 아이템
 
 class CombineItemsRequest(BaseModel):
     session_id: str
     items: List[str]
+
+class ItemActionRequest(BaseModel):
+    session_id: str
+    item_id: str
 
 class InteractResponse(BaseModel):
     success: bool
@@ -169,6 +173,25 @@ async def get_player_inventory(session_id: str):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"인벤토리 조회 실패: {str(e)}"
+        )
+
+@router.get("/character/{session_id}")
+async def get_player_character(session_id: str):
+    """플레이어 캐릭터 정보 조회"""
+    try:
+        service = get_game_service()
+        result = await service.get_player_character_info(session_id)
+        return result
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.error(f"캐릭터 정보 조회 실패: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"캐릭터 정보 조회 실패: {str(e)}"
         )
 
 @router.get("/cell/{session_id}")
@@ -296,6 +319,28 @@ async def interact_with_object(request: InteractObjectRequest):
             detail=f"오브젝트 상호작용 실패: {str(e)}"
         )
 
+@router.get("/object/{object_id}/contents")
+async def get_object_contents(object_id: str, session_id: str = Query(..., description="세션 ID")):
+    """오브젝트의 contents 조회"""
+    try:
+        service = get_interaction_service()
+        result = await service.get_object_contents(
+            session_id=session_id,
+            object_id=object_id
+        )
+        return result
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.error(f"오브젝트 contents 조회 실패: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"오브젝트 contents 조회 실패: {str(e)}"
+        )
+
 @router.post("/interact/object/pickup", response_model=InteractResponse)
 async def pickup_from_object(request: PickupFromObjectRequest):
     """오브젝트에서 아이템 획득"""
@@ -309,7 +354,7 @@ async def pickup_from_object(request: PickupFromObjectRequest):
         return InteractResponse(**result)
     except ValueError as e:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
+            status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e)
         )
     except Exception as e:
@@ -339,6 +384,116 @@ async def combine_items(request: CombineItemsRequest):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"아이템 조합 실패: {str(e)}"
+        )
+
+@router.post("/item/use", response_model=InteractResponse)
+async def use_item(request: ItemActionRequest):
+    """아이템 사용"""
+    try:
+        service = get_interaction_service()
+        result = await service.use_item(
+            session_id=request.session_id,
+            item_id=request.item_id
+        )
+        return InteractResponse(**result)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.error(f"아이템 사용 실패: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"아이템 사용 실패: {str(e)}"
+        )
+
+@router.post("/item/eat", response_model=InteractResponse)
+async def eat_item(request: ItemActionRequest):
+    """아이템 먹기"""
+    try:
+        service = get_interaction_service()
+        result = await service.eat_item(
+            session_id=request.session_id,
+            item_id=request.item_id
+        )
+        return InteractResponse(**result)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.error(f"아이템 먹기 실패: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"아이템 먹기 실패: {str(e)}"
+        )
+
+@router.post("/item/equip", response_model=InteractResponse)
+async def equip_item(request: ItemActionRequest):
+    """아이템 장착"""
+    try:
+        service = get_interaction_service()
+        result = await service.equip_item(
+            session_id=request.session_id,
+            item_id=request.item_id
+        )
+        return InteractResponse(**result)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.error(f"아이템 장착 실패: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"아이템 장착 실패: {str(e)}"
+        )
+
+@router.post("/item/unequip", response_model=InteractResponse)
+async def unequip_item(request: ItemActionRequest):
+    """아이템 해제"""
+    try:
+        service = get_interaction_service()
+        result = await service.unequip_item(
+            session_id=request.session_id,
+            item_id=request.item_id
+        )
+        return InteractResponse(**result)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.error(f"아이템 해제 실패: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"아이템 해제 실패: {str(e)}"
+        )
+
+@router.post("/item/drop", response_model=InteractResponse)
+async def drop_item(request: ItemActionRequest):
+    """아이템 버리기"""
+    try:
+        service = get_interaction_service()
+        result = await service.drop_item(
+            session_id=request.session_id,
+            item_id=request.item_id
+        )
+        return InteractResponse(**result)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.error(f"아이템 버리기 실패: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"아이템 버리기 실패: {str(e)}"
         )
 
 @router.get("/actions/{session_id}")

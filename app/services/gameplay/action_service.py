@@ -40,7 +40,60 @@ class ActionService(BaseGameplayService):
             actions = []
             
             # 연결된 셀로 이동 액션
-            # TODO: 연결된 셀 정보 조회하여 이동 액션 생성
+            # 현재 셀의 game_cell_id를 통해 connected_cells 정보 조회
+            cell_data_result = await self.cell_manager.get_cell(current_cell_id)
+            if cell_data_result.success and cell_data_result.cell:
+                cell_properties = cell_data_result.cell.properties
+                connected_cells_info = cell_properties.get('connected_cells', [])
+                
+                for connected_cell in connected_cells_info:
+                    target_game_cell_id = connected_cell['cell_id']
+                    direction = connected_cell.get('direction', '어딘가')
+                    description = connected_cell.get('description', f"{direction} 방향으로 이동")
+                    
+                    # 런타임 셀 ID 조회 또는 생성
+                    # 먼저 세션의 셀 참조에서 game_cell_id로 조회
+                    cell_refs = await self.reference_layer_repo.get_cell_references_by_session(session_id)
+                    runtime_target_cell_id = None
+                    for cell_ref in cell_refs:
+                        if cell_ref['game_cell_id'] == target_game_cell_id:
+                            runtime_target_cell_id = cell_ref['runtime_cell_id']
+                            break
+                    
+                    # 없으면 생성
+                    if not runtime_target_cell_id:
+                        import uuid
+                        runtime_target_cell_id = str(uuid.uuid4())
+                        await self.reference_layer_repo.create_cell_reference({
+                            'runtime_cell_id': runtime_target_cell_id,
+                            'game_cell_id': target_game_cell_id,
+                            'session_id': session_id
+                        })
+                        # runtime_cells에도 추가
+                        pool = await self.db.pool
+                        async with pool.acquire() as conn:
+                            await conn.execute(
+                                """
+                                INSERT INTO runtime_data.runtime_cells
+                                (runtime_cell_id, game_cell_id, session_id, created_at)
+                                VALUES ($1, $2, $3, NOW())
+                                ON CONFLICT (runtime_cell_id) DO NOTHING
+                                """,
+                                runtime_target_cell_id,
+                                target_game_cell_id,
+                                session_id
+                            )
+                    
+                    if runtime_target_cell_id:
+                        actions.append({
+                            "action_id": f"move_to_cell_{runtime_target_cell_id}",
+                            "action_type": "move",
+                            "text": f"{description} ({direction})",
+                            "target_id": runtime_target_cell_id,
+                            "target_name": connected_cell.get('cell_name', target_game_cell_id),
+                            "target_type": "cell",
+                            "description": description,
+                        })
             
             # 엔티티와 대화 액션
             for entity in cell_contents.get('entities', []):
@@ -113,10 +166,12 @@ class ActionService(BaseGameplayService):
                     continue
                     
                 object_name = obj.get('object_name', 'Object')
-                interaction_type = obj.get('interaction_type', 'examine')
                 properties = obj.get('properties', {})
                 if isinstance(properties, str):
                     properties = json.loads(properties)
+                
+                # interaction_type은 최상위 레벨 또는 properties에 있을 수 있음
+                interaction_type = obj.get('interaction_type') or properties.get('interaction_type', 'examine')
                 
                 # 런타임 상태에서 current_state 확인
                 current_state = None
