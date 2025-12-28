@@ -103,12 +103,65 @@ export class GameApiClient {
     return response.data;
   }
 
+  // 오브젝트의 contents 조회
+  async getObjectContents(sessionId: string, objectId: string) {
+    const response = await this.client.get(`/api/gameplay/object/${objectId}/contents`, {
+      params: { session_id: sessionId },
+    });
+    return response.data;
+  }
+
+  // 아이템 사용
+  async useItem(sessionId: string, itemId: string) {
+    const response = await this.client.post('/api/gameplay/item/use', {
+      session_id: sessionId,
+      item_id: itemId,
+    });
+    return response.data;
+  }
+
+  // 아이템 먹기
+  async eatItem(sessionId: string, itemId: string) {
+    const response = await this.client.post('/api/gameplay/item/eat', {
+      session_id: sessionId,
+      item_id: itemId,
+    });
+    return response.data;
+  }
+
+  // 아이템 장착
+  async equipItem(sessionId: string, itemId: string) {
+    const response = await this.client.post('/api/gameplay/item/equip', {
+      session_id: sessionId,
+      item_id: itemId,
+    });
+    return response.data;
+  }
+
+  // 아이템 해제
+  async unequipItem(sessionId: string, itemId: string) {
+    const response = await this.client.post('/api/gameplay/item/unequip', {
+      session_id: sessionId,
+      item_id: itemId,
+    });
+    return response.data;
+  }
+
+  // 아이템 버리기
+  async dropItem(sessionId: string, itemId: string) {
+    const response = await this.client.post('/api/gameplay/item/drop', {
+      session_id: sessionId,
+      item_id: itemId,
+    });
+    return response.data;
+  }
+
   // 오브젝트에서 아이템/장비/Effect Carrier 획득
-  async pickupFromObject(sessionId: string, objectId: string, itemId: string) {
+  async pickupFromObject(sessionId: string, objectId: string, itemId?: string) {
     const response = await this.client.post(`/api/gameplay/interact/object/pickup`, {
       session_id: sessionId,
       object_id: objectId,
-      item_id: itemId,
+      item_id: itemId, // 선택사항
     });
     return response.data;
   }
@@ -125,7 +178,14 @@ export class GameApiClient {
   // 플레이어 인벤토리 조회
   async getPlayerInventory(sessionId: string) {
     const response = await this.client.get(`/api/gameplay/inventory/${sessionId}`);
-    return response.data.inventory || [];
+    // API 응답이 {success: true, inventory: [...], equipped_items: [...]} 형태
+    return response.data;
+  }
+
+  // 플레이어 캐릭터 정보 조회
+  async getPlayerCharacter(sessionId: string) {
+    const response = await this.client.get(`/api/gameplay/character/${sessionId}`);
+    return response.data;
   }
 
   // 사용 가능한 액션 조회
