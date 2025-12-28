@@ -157,7 +157,7 @@ backend_error.log
 
 # Backup directories
 backup/
-archive/full_backup_*/
+archive/
 
 # OS
 Thumbs.db
@@ -174,4 +174,10 @@ Thumbs.db
 .env
 *.pyc
 .pytest_cache/
+
+# Test scripts and utilities
+tests/scripts/
+scripts/test_*.py
+scripts/debug_*.py
+scripts/check_*.py
 
