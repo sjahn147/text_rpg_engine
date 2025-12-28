@@ -32,7 +32,14 @@ export const InfoPanel: React.FC<InfoPanelProps> = ({ isOpen, onClose }) => {
     if (!gameState) return;
     try {
       const inventoryData = await gameApi.getPlayerInventory(gameState.session_id);
-      setInventory(inventoryData);
+      // API 응답이 {inventory: [...], equipped_items: [...]} 형태일 수 있음
+      if (inventoryData && typeof inventoryData === 'object' && 'inventory' in inventoryData) {
+        setInventory(inventoryData.inventory || []);
+      } else if (Array.isArray(inventoryData)) {
+        setInventory(inventoryData);
+      } else {
+        setInventory([]);
+      }
     } catch (error) {
       console.error('인벤토리 로드 실패:', error);
       setInventory([]);

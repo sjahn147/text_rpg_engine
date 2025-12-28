@@ -113,6 +113,31 @@ export const useGameActions = () => {
                   timestamp: Date.now(),
                 });
               }
+            } else if (action.target_type === 'object') {
+              // 오브젝트 조사
+              try {
+                const response = await gameApi.interactWithObject(
+                  gameState.session_id,
+                  action.target_id,
+                  'examine'
+                );
+                
+                setCurrentMessage({
+                  text: response.message || action.description || `${action.target_name}를 살펴봅니다.`,
+                  message_type: 'narration',
+                  timestamp: Date.now(),
+                });
+                
+                // 오브젝트 조사 후 해당 오브젝트에 대한 액션들을 업데이트
+                const actions = await gameApi.getAvailableActions(gameState.session_id);
+                setAvailableActions(actions);
+              } catch (error) {
+                setCurrentMessage({
+                  text: action.description || `${action.target_name}를 살펴봅니다.`,
+                  message_type: 'narration',
+                  timestamp: Date.now(),
+                });
+              }
             } else {
               setCurrentMessage({
                 text: action.description || `${action.target_name}를 살펴봅니다.`,
