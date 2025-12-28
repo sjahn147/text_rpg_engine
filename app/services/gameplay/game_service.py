@@ -1,8 +1,9 @@
 """
 게임 시작 및 상태 관리 서비스
 """
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 import json
+from datetime import datetime
 from app.core.game_manager import GameManager
 from app.core.game_session import GameSession
 from database.factories.game_data_factory import GameDataFactory
@@ -372,5 +373,243 @@ class GameService(BaseGameplayService):
                 
         except Exception as e:
             self.logger.error(f"캐릭터 정보 조회 실패: {str(e)}")
+            raise
+    
+    async def save_game(self, session_id: str, slot_id: int, save_name: Optional[str] = None) -> Dict[str, Any]:
+        """게임 저장"""
+        try:
+            # 게임 상태 조회
+            game_state = await self.get_game_state(session_id)
+            
+            # 세션 정보 조회
+            pool = await self.db.pool
+            async with pool.acquire() as conn:
+                session_info = await conn.fetchrow(
+                    """
+                    SELECT session_name, player_runtime_entity_id, created_at
+                    FROM runtime_data.active_sessions
+                    WHERE session_id = $1
+                    """,
+                    session_id
+                )
+                
+                if not session_info:
+                    raise ValueError("세션을 찾을 수 없습니다.")
+                
+                # 현재 시간 조회
+                from datetime import datetime
+                save_timestamp = datetime.now()
+                
+                # 플레이어 이름 조회
+                player_name = "플레이어"
+                if session_info.get('player_runtime_entity_id'):
+                    player_entity = await conn.fetchrow(
+                        """
+                        SELECT re.game_entity_id, e.entity_name
+                        FROM runtime_data.runtime_entities re
+                        JOIN game_data.entities e ON re.game_entity_id = e.entity_id
+                        WHERE re.runtime_entity_id = $1
+                        """,
+                        session_info['player_runtime_entity_id']
+                    )
+                    if player_entity:
+                        player_name = player_entity['entity_name']
+                
+                # 저장 슬롯 정보
+                save_data = {
+                    "slot_id": slot_id,
+                    "session_id": str(session_id),
+                    "save_name": save_name or f"저장 슬롯 {slot_id}",
+                    "player_name": player_name,
+                    "location": game_state.get("current_location", ""),
+                    "play_time": game_state.get("play_time", 0),
+                    "save_date": save_timestamp.isoformat(),
+                    "game_state": game_state
+                }
+                
+                # active_sessions.metadata에 저장 슬롯 정보 저장
+                metadata = await conn.fetchval(
+                    """
+                    SELECT metadata FROM runtime_data.active_sessions WHERE session_id = $1
+                    """,
+                    session_id
+                )
+                
+                if not metadata:
+                    metadata = {}
+                elif isinstance(metadata, str):
+                    metadata = json.loads(metadata)
+                
+                if "save_slots" not in metadata:
+                    metadata["save_slots"] = {}
+                
+                metadata["save_slots"][str(slot_id)] = save_data
+                
+                await conn.execute(
+                    """
+                    UPDATE runtime_data.active_sessions
+                    SET metadata = $1::jsonb, updated_at = NOW()
+                    WHERE session_id = $2
+                    """,
+                    json.dumps(metadata),
+                    session_id
+                )
+            
+            return {
+                "success": True,
+                "message": "게임이 저장되었습니다.",
+                "slot_id": slot_id
+            }
+        except Exception as e:
+            self.logger.error(f"게임 저장 실패: {str(e)}")
+            raise
+    
+    async def get_save_slots(self) -> List[Dict[str, Any]]:
+        """저장 슬롯 목록 조회"""
+        try:
+            pool = await self.db.pool
+            async with pool.acquire() as conn:
+                # 모든 세션의 저장 슬롯 조회
+                sessions = await conn.fetch(
+                    """
+                    SELECT session_id, metadata
+                    FROM runtime_data.active_sessions
+                    WHERE metadata IS NOT NULL AND metadata::text != '{}'
+                    """
+                )
+                
+                all_slots = {}
+                for session in sessions:
+                    metadata = session['metadata']
+                    if isinstance(metadata, str):
+                        metadata = json.loads(metadata)
+                    
+                    save_slots = metadata.get("save_slots", {})
+                    for slot_id, slot_data in save_slots.items():
+                        all_slots[slot_id] = slot_data
+                
+                # 슬롯 1-10 생성 (빈 슬롯 포함)
+                slots = []
+                for i in range(1, 11):
+                    slot_id = str(i)
+                    if slot_id in all_slots:
+                        slot_data = all_slots[slot_id]
+                        slots.append({
+                            "slot_id": i,
+                            "session_id": slot_data.get("session_id"),
+                            "player_name": slot_data.get("player_name", "플레이어"),
+                            "location": slot_data.get("location", ""),
+                            "play_time": slot_data.get("play_time", 0),
+                            "save_date": slot_data.get("save_date", ""),
+                            "is_empty": False
+                        })
+                    else:
+                        slots.append({
+                            "slot_id": i,
+                            "is_empty": True
+                        })
+                
+                return slots
+        except Exception as e:
+            self.logger.error(f"저장 슬롯 조회 실패: {str(e)}")
+            raise
+    
+    async def load_game(self, slot_id: int) -> Dict[str, Any]:
+        """게임 불러오기"""
+        try:
+            pool = await self.db.pool
+            async with pool.acquire() as conn:
+                # 모든 세션에서 저장 슬롯 찾기
+                sessions = await conn.fetch(
+                    """
+                    SELECT session_id, metadata
+                    FROM runtime_data.active_sessions
+                    WHERE metadata IS NOT NULL AND metadata::text != '{}'
+                    """
+                )
+                
+                save_data = None
+                for session in sessions:
+                    metadata = session['metadata']
+                    if isinstance(metadata, str):
+                        metadata = json.loads(metadata)
+                    
+                    save_slots = metadata.get("save_slots", {})
+                    if str(slot_id) in save_slots:
+                        save_data = save_slots[str(slot_id)]
+                        break
+                
+                if not save_data:
+                    raise ValueError(f"저장 슬롯 {slot_id}를 찾을 수 없습니다.")
+                
+                session_id = save_data.get("session_id")
+                if not session_id:
+                    raise ValueError("저장된 세션 ID가 없습니다.")
+                
+                # 세션이 활성 상태인지 확인
+                session_exists = await conn.fetchval(
+                    """
+                    SELECT COUNT(*) FROM runtime_data.active_sessions WHERE session_id = $1
+                    """,
+                    session_id
+                )
+                
+                if session_exists == 0:
+                    raise ValueError("저장된 세션이 더 이상 존재하지 않습니다.")
+                
+                # 게임 상태 반환
+                game_state = await self.get_game_state(session_id)
+                
+                return {
+                    "success": True,
+                    "message": "게임을 불러왔습니다.",
+                    "session_id": session_id,
+                    "game_state": game_state
+                }
+        except Exception as e:
+            self.logger.error(f"게임 불러오기 실패: {str(e)}")
+            raise
+    
+    async def delete_save(self, slot_id: int) -> Dict[str, Any]:
+        """저장 슬롯 삭제"""
+        try:
+            pool = await self.db.pool
+            async with pool.acquire() as conn:
+                # 모든 세션에서 저장 슬롯 찾아서 삭제
+                sessions = await conn.fetch(
+                    """
+                    SELECT session_id, metadata
+                    FROM runtime_data.active_sessions
+                    WHERE metadata IS NOT NULL AND metadata::text != '{}'
+                    """
+                )
+                
+                for session in sessions:
+                    metadata = session['metadata']
+                    if isinstance(metadata, str):
+                        metadata = json.loads(metadata)
+                    
+                    save_slots = metadata.get("save_slots", {})
+                    if str(slot_id) in save_slots:
+                        del save_slots[str(slot_id)]
+                        metadata["save_slots"] = save_slots
+                        
+                        await conn.execute(
+                            """
+                            UPDATE runtime_data.active_sessions
+                            SET metadata = $1::jsonb, updated_at = NOW()
+                            WHERE session_id = $2
+                            """,
+                            json.dumps(metadata),
+                            session['session_id']
+                        )
+                        break
+                
+                return {
+                    "success": True,
+                    "message": f"저장 슬롯 {slot_id}가 삭제되었습니다."
+                }
+        except Exception as e:
+            self.logger.error(f"저장 슬롯 삭제 실패: {str(e)}")
             raise
 

@@ -75,8 +75,55 @@ class LearningInteractionHandler(ObjectInteractionHandlerBase):
         parameters: Optional[Dict[str, Any]] = None
     ) -> ActionResult:
         """오브젝트 공부하기"""
-        # read와 유사하지만 시간 대량 소모
-        return await self.handle_read(entity_id, target_id, parameters)
+        session_id = parameters.get("session_id") if parameters else None
+        if not session_id:
+            return ActionResult.failure_result("세션 ID가 필요합니다.")
+        
+        runtime_object_id, game_object_id = await self._parse_object_id(target_id, session_id)
+        
+        if not game_object_id:
+            return ActionResult.failure_result("오브젝트를 찾을 수 없습니다.")
+        
+        object_state = await self._get_object_state(runtime_object_id, game_object_id, session_id)
+        
+        if not object_state:
+            return ActionResult.failure_result("오브젝트 상태를 조회할 수 없습니다.")
+        
+        properties = object_state.get('properties', {})
+        interactions = properties.get('interactions', {})
+        study_config = interactions.get('study', {})
+        
+        # 공부 내용 (read보다 더 상세)
+        content = study_config.get('content', object_state.get('object_description', ''))
+        
+        # EffectCarrier 적용 (공부는 효과를 더 많이 적용)
+        effect_carrier_id = study_config.get('effect_carrier_id')
+        if effect_carrier_id and self.effect_carrier_manager:
+            effect_result = await self.effect_carrier_manager.grant_effect_to_entity(
+                session_id=session_id,
+                entity_id=entity_id,
+                effect_id=effect_carrier_id,
+                source=f"study_object:{game_object_id}"
+            )
+            if not effect_result.success:
+                self.logger.warning(f"Effect Carrier 적용 실패: {effect_result.message}")
+        
+        object_name = object_state.get('object_name', '오브젝트')
+        
+        # TimeSystem 연동 (공부는 read보다 더 많은 시간 소모)
+        time_cost = study_config.get('time_cost', 120)  # 기본 2시간
+        if time_cost > 0:
+            from app.systems.time_system import TimeSystem
+            time_system = TimeSystem()
+            try:
+                await time_system.advance_time(minutes=time_cost)
+            except Exception as e:
+                self.logger.warning(f"TimeSystem 연동 실패: {str(e)}")
+        
+        return ActionResult.success_result(
+            f"{object_name}을(를) 공부했습니다.\n\n{content}",
+            data={"content": content, "effect_carrier_id": effect_carrier_id, "time_cost": time_cost}
+        )
     
     async def handle_write(
         self,
@@ -98,6 +145,12 @@ class LearningInteractionHandler(ObjectInteractionHandlerBase):
         if not game_object_id:
             return ActionResult.failure_result("오브젝트를 찾을 수 없습니다.")
         
+        object_state = await self._get_object_state(runtime_object_id, game_object_id, session_id)
+        if not object_state:
+            return ActionResult.failure_result("오브젝트 상태를 조회할 수 없습니다.")
+        
+        properties = object_state.get('properties', {})
+        
         # 오브젝트 상태 업데이트
         updated_state = await self._update_object_state(
             runtime_object_id,
@@ -110,7 +163,7 @@ class LearningInteractionHandler(ObjectInteractionHandlerBase):
         if not updated_state:
             return ActionResult.failure_result("오브젝트 상태를 업데이트할 수 없습니다.")
         
-        object_name = updated_state.get('object_name', '오브젝트')
+        object_name = object_state.get('object_name', '오브젝트')
         
         # TimeSystem 연동
         write_config = properties.get('interactions', {}).get('write', {})

@@ -106,6 +106,10 @@ export const useGameActions = () => {
                   message_type: 'narration',
                   timestamp: Date.now(),
                 });
+                
+                // 엔티티 조사 후 액션 목록 업데이트
+                const actions = await gameApi.getAvailableActions(gameState.session_id);
+                setAvailableActions(actions);
               } catch (error) {
                 setCurrentMessage({
                   text: action.description || `${action.target_name}를 살펴봅니다.`,
@@ -128,7 +132,7 @@ export const useGameActions = () => {
                   timestamp: Date.now(),
                 });
                 
-                // 오브젝트 조사 후 해당 오브젝트에 대한 액션들을 업데이트
+                // 오브젝트 조사 후 액션 목록 업데이트 (해당 오브젝트에 대한 액션들이 나타남)
                 const actions = await gameApi.getAvailableActions(gameState.session_id);
                 setAvailableActions(actions);
               } catch (error) {
@@ -154,7 +158,6 @@ export const useGameActions = () => {
         case 'extinguish':
         case 'sit':
         case 'rest':
-        case 'pickup':
           if (action.target_id && action.target_type === 'object') {
             try {
               const response = await gameApi.interactWithObject(
@@ -184,6 +187,13 @@ export const useGameActions = () => {
               });
             }
           }
+          break;
+          
+        case 'pickup':
+          // pickup 액션은 GameView에서 ObjectInventoryModal을 통해 처리
+          // 여기서는 모달을 열기 위한 콜백이 필요하지만, 
+          // useGameActions는 hook이므로 모달 상태 관리는 GameView에서 처리
+          // 따라서 pickup 액션은 GameView의 handleActionSelect에서 직접 처리됨
           break;
       }
     } catch (error) {

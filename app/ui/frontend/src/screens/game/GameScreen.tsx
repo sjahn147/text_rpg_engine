@@ -56,14 +56,22 @@ export const GameScreen: React.FC = () => {
       {currentScreen === 'gameOver' && (
         <GameOverScreen
           onRestart={() => {
-            // TODO: 게임 재시작 로직
+            // 게임 상태 초기화
+            const { reset } = useGameStore.getState();
+            reset();
+            // 인트로 화면으로 이동
             navigate('intro');
           }}
           onLoadSave={() => {
             setSaveLoadMode('load');
             navigate('saveLoad');
           }}
-          onMainMenu={() => navigate('intro')}
+          onMainMenu={() => {
+            // 게임 상태 초기화
+            const { reset } = useGameStore.getState();
+            reset();
+            navigate('intro');
+          }}
         />
       )}
     </>

@@ -730,6 +730,17 @@ class CellManager:
                             properties = properties.copy()
                             properties['contents'] = state_dict['contents']
                     
+                    # 런타임 상태에서 state 확인 및 properties에 추가
+                    if runtime_state and runtime_state.get('current_state'):
+                        state_dict = parse_jsonb_data(runtime_state['current_state'])
+                        # state를 properties에 추가
+                        if 'state' in state_dict:
+                            properties['state'] = state_dict['state']
+                            properties['current_state'] = state_dict['state']
+                        # contents도 properties에 추가 (이미 위에서 처리했지만 확실히)
+                        if 'contents' in state_dict and 'contents' not in properties:
+                            properties['contents'] = state_dict['contents']
+                    
                     # runtime_object_id는 이미 레퍼런스 레이어를 통해 확보됨
                     objects.append({
                         'runtime_object_id': runtime_object_id,

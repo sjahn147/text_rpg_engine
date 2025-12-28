@@ -19,6 +19,9 @@ import { useGameStore } from '../../store/gameStore';
 import { gameApi } from '../../services/gameApi';
 import { GameAction, WorldObjectInfo, EntityInfo } from '../../types/game';
 import type { GameScreenType } from '../../hooks/game/useGameNavigation';
+import { useObjectInteraction } from '../../hooks/game/useObjectInteraction';
+import { useEntityInteraction } from '../../hooks/game/useEntityInteraction';
+import { useContextMenuActions } from '../../hooks/game/useContextMenuActions';
 
 interface GameViewProps {
   onNavigate?: (screen: GameScreenType) => void;
@@ -48,12 +51,38 @@ export const GameView: React.FC<GameViewProps> = ({ onNavigate }) => {
   const [saveLoadMode, setSaveLoadMode] = useState<'save' | 'load'>('save');
   const [interactionTarget, setInteractionTarget] = useState<{ object?: WorldObjectInfo; entity?: EntityInfo } | null>(null);
   const [selectedObjectId, setSelectedObjectId] = useState<string | undefined>(undefined);
-  const [discoveredObjects, setDiscoveredObjects] = useState<Set<string>>(new Set());
+  const { discoveredObjects, setDiscoveredObjects } = useGameStore();
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; target: { object?: WorldObjectInfo; entity?: EntityInfo } } | null>(null);
   const [showObjectInventoryModal, setShowObjectInventoryModal] = useState(false);
   const [pickupObjectId, setPickupObjectId] = useState<string | null>(null);
   const [pickupObjectName, setPickupObjectName] = useState<string>('');
   const autoTimerRef = useRef<number | null>(null);
+
+  // Hooks for interaction handling
+  const { handleObjectAction } = useObjectInteraction({
+    onPickupRequest: (objectId, objectName) => {
+      setPickupObjectId(objectId);
+      setPickupObjectName(objectName);
+      setShowObjectInventoryModal(true);
+    },
+    onCellChange: async () => {
+      if (gameState) {
+        // 발견된 오브젝트 초기화
+        setDiscoveredObjects(new Set());
+        // 새로운 액션 조회
+        const actions = await gameApi.getAvailableActions(gameState.session_id);
+        setAvailableActions(actions);
+      }
+    },
+  });
+
+  const { handleEntityAction } = useEntityInteraction();
+
+  // ContextMenu 액션 목록 (항상 호출되어야 함 - hooks 규칙)
+  const contextMenuActions = useContextMenuActions(
+    contextMenu?.target.object,
+    contextMenu?.target.entity
+  );
 
   // 게임 초기화 함수 (MainGameScreen에서도 처리하지만, GameView가 독립적으로 사용될 수 있도록 유지)
   const initializeGame = async () => {
@@ -161,6 +190,9 @@ export const GameView: React.FC<GameViewProps> = ({ onNavigate }) => {
             // 새로운 액션 조회
             const actions = await gameApi.getAvailableActions(gameState.session_id);
             setAvailableActions(actions);
+            
+            // 발견된 오브젝트 초기화 (새 셀에서는 아직 발견하지 않음)
+            setDiscoveredObjects(new Set());
           }
           break;
           
@@ -195,7 +227,7 @@ export const GameView: React.FC<GameViewProps> = ({ onNavigate }) => {
             const allObjectIds = currentCell.objects.map(obj => 
               obj.object_id || (obj as any).runtime_object_id || (obj as any).game_object_id
             ).filter(id => id);
-            setDiscoveredObjects(prev => new Set([...prev, ...allObjectIds]));
+            setDiscoveredObjects(new Set([...discoveredObjects, ...allObjectIds]));
             
             // 메시지 표시
             const objectNames = currentCell.objects.map(obj => obj.object_name).join(', ');
@@ -229,6 +261,10 @@ export const GameView: React.FC<GameViewProps> = ({ onNavigate }) => {
                   message_type: 'narration',
                   timestamp: Date.now(),
                 });
+                
+                // 엔티티 조사 후 액션 목록 업데이트
+                const actions = await gameApi.getAvailableActions(gameState.session_id);
+                setAvailableActions(actions);
               } catch (error) {
                 setCurrentMessage({
                   text: action.description || `${action.target_name}를 살펴봅니다.`,
@@ -251,7 +287,7 @@ export const GameView: React.FC<GameViewProps> = ({ onNavigate }) => {
                   timestamp: Date.now(),
                 });
                 
-                // 오브젝트 조사 후 해당 오브젝트에 대한 액션들을 업데이트
+                // 오브젝트 조사 후 액션 목록 업데이트 (해당 오브젝트에 대한 액션들이 나타남)
                 const actions = await gameApi.getAvailableActions(gameState.session_id);
                 setAvailableActions(actions);
               } catch (error) {
@@ -277,7 +313,6 @@ export const GameView: React.FC<GameViewProps> = ({ onNavigate }) => {
         case 'extinguish':
         case 'sit':
         case 'rest':
-        case 'pickup':
           // 오브젝트 상호작용 - 직접 처리
           if (action.target_id && action.target_type === 'object') {
             try {
@@ -308,6 +343,15 @@ export const GameView: React.FC<GameViewProps> = ({ onNavigate }) => {
                 timestamp: Date.now(),
               });
             }
+          }
+          break;
+          
+        case 'pickup':
+          // 오브젝트에서 아이템 획득 - 인벤토리 모달 열기
+          if (action.target_id && action.target_type === 'object') {
+            setPickupObjectId(action.target_id);
+            setPickupObjectName(action.target_name || '오브젝트');
+            setShowObjectInventoryModal(true);
           }
           break;
       }
@@ -537,7 +581,30 @@ export const GameView: React.FC<GameViewProps> = ({ onNavigate }) => {
       {/* 선택지 레이어 - 컨텍스트 메뉴가 없을 때만 표시 */}
       {showChoices && !contextMenu && (
         <ChoiceLayer
-          actions={availableActions}
+          actions={availableActions.filter(action => {
+            // 디버깅용: 환경 변수로 전체 목록 표시 가능
+            const showAllActions = (import.meta as any).env?.VITE_DEBUG_SHOW_ALL_ACTIONS === 'true';
+            if (showAllActions) {
+              // 디버깅 모드: 오브젝트 액션만 제외하고 나머지 표시
+              const objectActions = [
+                'examine_object', 'inspect_object', 'search_object',
+                'open_object', 'close_object', 'light_object', 'extinguish_object',
+                'activate_object', 'deactivate_object', 'lock_object', 'unlock_object',
+                'sit_at_object', 'stand_from_object', 'lie_on_object', 'get_up_from_object',
+                'climb_object', 'descend_from_object',
+                'rest_at_object', 'sleep_at_object', 'meditate_at_object',
+                'eat_from_object', 'drink_from_object', 'consume_object',
+                'read_object', 'study_object', 'write_object',
+                'pickup_from_object', 'place_in_object', 'take_from_object', 'put_in_object',
+                'combine_with_object', 'craft_at_object', 'cook_at_object', 'repair_object',
+                'destroy_object', 'break_object', 'dismantle_object',
+                'use_object'
+              ];
+              return !objectActions.includes(action.action_type);
+            }
+            // 프로덕션: "observe"와 "move" 액션만 표시 (주변 관찰하기, 맵 이동)
+            return action.action_type === 'observe' || action.action_type === 'move';
+          })}
           onActionSelect={handleActionSelect}
         />
       )}
@@ -624,136 +691,16 @@ export const GameView: React.FC<GameViewProps> = ({ onNavigate }) => {
         <ContextMenu
           x={contextMenu.x}
           y={contextMenu.y}
-          actions={(() => {
-            const actions: Array<{ id: string; label: string; icon?: string }> = [];
-            
-            if (contextMenu.target.object) {
-              const obj = contextMenu.target.object;
-              // interaction_type은 properties 또는 최상위 레벨에 있을 수 있음
-              const interactionType = obj.properties?.interaction_type || (obj as any).interaction_type;
-              const contents = (obj.properties?.contents as string[]) || [];
-              
-              // 조사하기 (항상 가능)
-              actions.push({ id: 'examine', label: '조사', icon: '🔍' });
-              
-              // 상호작용 타입에 따른 액션
-              if (interactionType === 'openable') {
-                actions.push({ id: 'open', label: '열기', icon: '📦' });
-              } else if (interactionType === 'lightable') {
-                actions.push({ id: 'light', label: '불', icon: '🕯️' });
-              } else if (interactionType === 'sitable') {
-                actions.push({ id: 'sit', label: '앉기', icon: '🪑' });
-              } else if (interactionType === 'restable') {
-                actions.push({ id: 'rest', label: '쉬기', icon: '🛏️' });
-              }
-              
-              // 내용물이 있으면 줍기
-              if (contents.length > 0) {
-                actions.push({ id: 'pickup', label: '줍기', icon: '📥' });
-              }
-            } else if (contextMenu.target.entity) {
-              const entity = contextMenu.target.entity;
-              
-              // 조사하기 (항상 가능)
-              actions.push({ id: 'examine', label: '조사', icon: '🔍' });
-              
-              // 대화하기
-              if (entity.dialogue_id) {
-                actions.push({ id: 'dialogue', label: '대화', icon: '💬' });
-              }
-              
-              // 상호작용하기
-              if (entity.can_interact) {
-                actions.push({ id: 'interact', label: '상호작용', icon: '🤝' });
-              }
-            }
-            
-            return actions;
-          })()}
+          actions={contextMenuActions}
           onActionSelect={async (actionId) => {
             if (!contextMenu || !gameState) return;
             
-            const target = contextMenu.target.object || contextMenu.target.entity;
-            if (!target) return;
+            setContextMenu(null);
             
-            // object_id 우선, 없으면 runtime_object_id 또는 game_object_id 사용
-            const targetId = contextMenu.target.object 
-              ? (contextMenu.target.object.object_id || (contextMenu.target.object as any).runtime_object_id || (contextMenu.target.object as any).game_object_id || '')
-              : (contextMenu.target.entity?.entity_id || '');
-            
-            try {
-              setLoading(true);
-              setContextMenu(null);
-              
-              if (contextMenu.target.object) {
-                const obj = contextMenu.target.object;
-                const objId = obj.object_id || (obj as any).runtime_object_id || (obj as any).game_object_id || targetId;
-                
-                if (actionId === 'pickup') {
-                  // 오브젝트 인벤토리 모달 표시
-                  setPickupObjectId(objId);
-                  setPickupObjectName(obj.object_name || '오브젝트');
-                  setShowObjectInventoryModal(true);
-                } else {
-                  // 열기, 불 켜기, 앉기, 쉬기, 조사하기 등 일반 상호작용
-                  console.log('[GameView] Interacting with object:', { objId, actionId });
-                  const response = await gameApi.interactWithObject(
-                    gameState.session_id,
-                    objId,
-                    actionId
-                  );
-                  
-                  console.log('[GameView] Interaction response:', response);
-                  
-                  // 응답 확인
-                  if (response && response.message) {
-                    setCurrentMessage({
-                      text: response.message,
-                      message_type: actionId === 'examine' ? 'narration' : 'system',
-                      timestamp: Date.now(),
-                    });
-                  } else {
-                    console.warn('[GameView] No message in response:', response);
-                    setCurrentMessage({
-                      text: `${contextMenu.target.object?.object_name || '오브젝트'}와 상호작용했습니다.`,
-                      message_type: 'system',
-                      timestamp: Date.now(),
-                    });
-                  }
-                  
-                  // 열기 액션의 경우 contents가 변경될 수 있으므로 셀 정보 새로고침
-                  if (actionId === 'open') {
-                    const cell = await gameApi.getCurrentCell(gameState.session_id);
-                    setCurrentCell(cell);
-                    const actions = await gameApi.getAvailableActions(gameState.session_id);
-                    setAvailableActions(actions);
-                  }
-                }
-              } else if (contextMenu.target.entity) {
-                const response = await gameApi.interactWithEntity(
-                  gameState.session_id,
-                  targetId,
-                  actionId
-                );
-                setCurrentMessage({
-                  text: response.message,
-                  message_type: actionId === 'dialogue' ? 'dialogue' : 'system',
-                  timestamp: Date.now(),
-                });
-              }
-            } catch (error) {
-              const errorMessage = error instanceof Error ? error.message : '상호작용 실패';
-              setError(errorMessage);
-              console.error('상호작용 실패:', error);
-              
-              // 에러 메시지도 표시
-              setCurrentMessage({
-                text: `상호작용에 실패했습니다: ${errorMessage}`,
-                message_type: 'system',
-                timestamp: Date.now(),
-              });
-            } finally {
-              setLoading(false);
+            if (contextMenu.target.object) {
+              await handleObjectAction(contextMenu.target.object, actionId);
+            } else if (contextMenu.target.entity) {
+              await handleEntityAction(contextMenu.target.entity, actionId);
             }
           }}
           onClose={() => setContextMenu(null)}

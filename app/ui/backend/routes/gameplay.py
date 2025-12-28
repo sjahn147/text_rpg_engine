@@ -1,7 +1,7 @@
 """
 게임플레이 API 라우트 (리팩토링 버전)
 """
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from fastapi import APIRouter, HTTPException, status, Depends, Query
 from pydantic import BaseModel
 from app.services.gameplay import (
@@ -118,6 +118,42 @@ class InteractResponse(BaseModel):
     success: bool
     message: str
     result: Optional[dict] = None
+
+class SaveGameRequest(BaseModel):
+    session_id: str
+    slot_id: int
+    save_name: Optional[str] = None
+
+class SaveGameResponse(BaseModel):
+    success: bool
+    message: str
+    slot_id: int
+
+class LoadGameRequest(BaseModel):
+    slot_id: int
+
+class LoadGameResponse(BaseModel):
+    success: bool
+    message: str
+    session_id: str
+    game_state: Dict[str, Any]
+
+class DeleteSaveResponse(BaseModel):
+    success: bool
+    message: str
+
+class SaveSlot(BaseModel):
+    slot_id: int
+    session_id: Optional[str] = None
+    player_name: Optional[str] = None
+    location: Optional[str] = None
+    play_time: Optional[int] = None
+    save_date: Optional[str] = None
+    is_empty: bool
+
+class SaveSlotsResponse(BaseModel):
+    success: bool
+    slots: List[SaveSlot]
 
 
 # API 엔드포인트
@@ -512,5 +548,80 @@ async def get_available_actions(session_id: str):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"액션 조회 실패: {str(e)}"
+        )
+
+@router.post("/save", response_model=SaveGameResponse)
+async def save_game(request: SaveGameRequest):
+    """게임 저장"""
+    try:
+        service = get_game_service()
+        result = await service.save_game(
+            session_id=request.session_id,
+            slot_id=request.slot_id,
+            save_name=request.save_name
+        )
+        return SaveGameResponse(**result)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.error(f"게임 저장 실패: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"게임 저장 실패: {str(e)}"
+        )
+
+@router.get("/save-slots", response_model=SaveSlotsResponse)
+async def get_save_slots():
+    """저장 슬롯 목록 조회"""
+    try:
+        service = get_game_service()
+        slots = await service.get_save_slots()
+        return SaveSlotsResponse(success=True, slots=slots)
+    except Exception as e:
+        logger.error(f"저장 슬롯 조회 실패: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"저장 슬롯 조회 실패: {str(e)}"
+        )
+
+@router.post("/load", response_model=LoadGameResponse)
+async def load_game(request: LoadGameRequest):
+    """게임 불러오기"""
+    try:
+        service = get_game_service()
+        result = await service.load_game(request.slot_id)
+        return LoadGameResponse(**result)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.error(f"게임 불러오기 실패: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"게임 불러오기 실패: {str(e)}"
+        )
+
+@router.delete("/save/{slot_id}", response_model=DeleteSaveResponse)
+async def delete_save(slot_id: int):
+    """저장 슬롯 삭제"""
+    try:
+        service = get_game_service()
+        result = await service.delete_save(slot_id)
+        return DeleteSaveResponse(**result)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.error(f"저장 슬롯 삭제 실패: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"저장 슬롯 삭제 실패: {str(e)}"
         )
 

@@ -194,6 +194,36 @@ export class GameApiClient {
     return response.data;
   }
 
+  // 게임 저장
+  async saveGame(sessionId: string, slotId: number, saveName?: string) {
+    const response = await this.client.post('/api/gameplay/save', {
+      session_id: sessionId,
+      slot_id: slotId,
+      save_name: saveName,
+    });
+    return response.data;
+  }
+
+  // 저장 슬롯 목록 조회
+  async getSaveSlots() {
+    const response = await this.client.get('/api/gameplay/save-slots');
+    return response.data;
+  }
+
+  // 게임 불러오기
+  async loadGame(slotId: number) {
+    const response = await this.client.post('/api/gameplay/load', {
+      slot_id: slotId,
+    });
+    return response.data;
+  }
+
+  // 저장 슬롯 삭제
+  async deleteSave(slotId: number) {
+    const response = await this.client.delete(`/api/gameplay/save/${slotId}`);
+    return response.data;
+  }
+
   // 헬스 체크
   async healthCheck() {
     const response = await this.client.get('/health');

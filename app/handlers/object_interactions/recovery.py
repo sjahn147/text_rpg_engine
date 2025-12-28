@@ -139,8 +139,11 @@ class RecoveryInteractionHandler(ObjectInteractionHandlerBase):
             except Exception as e:
                 self.logger.warning(f"TimeSystem 연동 실패: {str(e)}")
         
-        # 피로도 감소 처리 (EntityManager에 피로도 관리 기능이 추가되면 구현)
-        # TODO: EntityManager에 reduce_fatigue 메서드 추가 필요
+        # 피로도 감소 처리
+        # Note: EntityManager에 피로도 관리 기능이 추가되면 여기서 처리
+        # 현재는 effects에 fatigue 값이 있으면 로그만 남김
+        if fatigue_reduce < 0:
+            self.logger.info(f"피로도 감소: {abs(fatigue_reduce)} (EntityManager 피로도 관리 기능 필요)")
         
         return ActionResult.success_result(
             f"{object_name}에서 잠을 잤습니다. {restore_result.message}",

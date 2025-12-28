@@ -112,6 +112,8 @@ class CellService(BaseGameplayService):
     ) -> Dict[str, Any]:
         """
         플레이어 이동
+        target_cell_id는 game_cell_id 또는 runtime_cell_id일 수 있음
+        ReferenceLayerRepository를 통해서만 ID 변환 수행
         
         Returns:
             {
@@ -129,10 +131,30 @@ class CellService(BaseGameplayService):
             
             player_id = player_entities[0]['runtime_entity_id']
             
+            # ReferenceLayerRepository를 통한 ID 변환
+            # 먼저 runtime_cell_id로 조회 시도
+            cell_ref = await self.reference_layer_repo.get_cell_reference(target_cell_id)
+            
+            # runtime_cell_id가 아니면 game_cell_id로 조회
+            if not cell_ref or cell_ref.get('session_id') != session_id:
+                cell_ref = await self.reference_layer_repo.get_cell_reference_by_game_id(target_cell_id, session_id)
+            
+            # 여전히 없으면 game_cell_id로 간주하고 생성
+            if not cell_ref:
+                # game_cell_id가 유효한지 확인
+                game_cell = await self.game_data_repo.get_world_cell(target_cell_id)
+                if not game_cell:
+                    raise ValueError(f"셀 '{target_cell_id}'를 찾을 수 없습니다.")
+                
+                # ReferenceLayerRepository를 통한 생성
+                cell_ref = await self.reference_layer_repo.get_or_create_cell_reference(target_cell_id, session_id)
+            
+            runtime_target_cell_id = cell_ref['runtime_cell_id']
+            
             # 이동 처리 (GameSession의 move_player 사용)
             success = await session.move_player(
                 player_id=player_id,
-                target_cell_id=target_cell_id,
+                target_cell_id=runtime_target_cell_id,
                 new_position={"x": 0, "y": 0, "z": 0}
             )
             

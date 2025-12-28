@@ -24,6 +24,7 @@ interface GameStore {
   isSkipMode: boolean; // 스킵 모드
   history: HistoryEntry[]; // 대화/액션 기록
   isInfoPanelOpen: boolean; // 정보 패널 (인벤토리, 시간, 저널)
+  discoveredObjects: Set<string>; // 발견된 오브젝트 ID 목록
   
   setGameState: (state: GameState) => void;
   setCurrentCell: (cell: CellInfo) => void;
@@ -37,6 +38,7 @@ interface GameStore {
   addHistory: (entry: HistoryEntry) => void;
   clearHistory: () => void;
   toggleInfoPanel: () => void;
+  setDiscoveredObjects: (objects: Set<string>) => void;
   reset: () => void;
 }
 
@@ -52,6 +54,7 @@ export const useGameStore = create<GameStore>((set) => ({
   isSkipMode: false,
   history: [],
   isInfoPanelOpen: false,
+  discoveredObjects: new Set<string>(),
 
   setGameState: (state) => set({ gameState: state }),
   setCurrentCell: (cell) => set({ currentCell: cell }),
@@ -67,6 +70,7 @@ export const useGameStore = create<GameStore>((set) => ({
   })),
   clearHistory: () => set({ history: [] }),
   toggleInfoPanel: () => set((state) => ({ isInfoPanelOpen: !state.isInfoPanelOpen })),
+  setDiscoveredObjects: (objects) => set({ discoveredObjects: objects }),
   reset: () => set({
     gameState: null,
     currentCell: null,
@@ -79,6 +83,7 @@ export const useGameStore = create<GameStore>((set) => ({
     isSkipMode: false,
     history: [],
     isInfoPanelOpen: false,
+    discoveredObjects: new Set<string>(),
   }),
 }));
 

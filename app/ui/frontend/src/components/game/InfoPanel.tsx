@@ -32,11 +32,12 @@ export const InfoPanel: React.FC<InfoPanelProps> = ({ isOpen, onClose }) => {
     if (!gameState) return;
     try {
       const inventoryData = await gameApi.getPlayerInventory(gameState.session_id);
-      // API 응답이 {inventory: [...], equipped_items: [...]} 형태일 수 있음
-      if (inventoryData && typeof inventoryData === 'object' && 'inventory' in inventoryData) {
-        setInventory(inventoryData.inventory || []);
-      } else if (Array.isArray(inventoryData)) {
+      console.log('[InfoPanel] Inventory data:', inventoryData);
+      // API 응답이 {inventory: [...], equipped_items: [...]} 형태 또는 직접 배열
+      if (Array.isArray(inventoryData)) {
         setInventory(inventoryData);
+      } else if (inventoryData.inventory) {
+        setInventory(inventoryData.inventory);
       } else {
         setInventory([]);
       }
@@ -46,10 +47,8 @@ export const InfoPanel: React.FC<InfoPanelProps> = ({ isOpen, onClose }) => {
     }
   };
 
-  if (!isOpen) return null;
-
   return (
-    <AnimatePresence>
+    <AnimatePresence mode="wait">
       {isOpen && (
         <>
           <motion.div

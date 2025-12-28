@@ -208,15 +208,54 @@ class InteractionService(BaseGameplayService):
             from app.handlers.action_result import ActionType
             
             action_type_map = {
+                # Information
                 'examine': ActionType.EXAMINE_OBJECT,
+                'inspect': ActionType.INSPECT_OBJECT,
+                'search': ActionType.SEARCH_OBJECT,
+                # State Change
                 'open': ActionType.OPEN_OBJECT,
                 'close': ActionType.CLOSE_OBJECT,
                 'light': ActionType.LIGHT_OBJECT,
                 'extinguish': ActionType.EXTINGUISH_OBJECT,
+                'activate': ActionType.ACTIVATE_OBJECT,
+                'deactivate': ActionType.DEACTIVATE_OBJECT,
+                'lock': ActionType.LOCK_OBJECT,
+                'unlock': ActionType.UNLOCK_OBJECT,
+                # Position
                 'sit': ActionType.SIT_AT_OBJECT,
+                'stand': ActionType.STAND_FROM_OBJECT,
+                'lie': ActionType.LIE_ON_OBJECT,
+                'get_up': ActionType.GET_UP_FROM_OBJECT,
+                'climb': ActionType.CLIMB_OBJECT,
+                'descend': ActionType.DESCEND_FROM_OBJECT,
+                # Recovery
                 'rest': ActionType.REST_AT_OBJECT,
                 'sleep': ActionType.SLEEP_AT_OBJECT,
+                'meditate': ActionType.MEDITATE_AT_OBJECT,
+                # Consumption
+                'eat': ActionType.EAT_FROM_OBJECT,
+                'drink': ActionType.DRINK_FROM_OBJECT,
+                'consume': ActionType.CONSUME_OBJECT,
+                # Learning
+                'read': ActionType.READ_OBJECT,
+                'study': ActionType.STUDY_OBJECT,
+                'write': ActionType.WRITE_OBJECT,
+                # Item Manipulation
                 'pickup': ActionType.PICKUP_FROM_OBJECT,
+                'place': ActionType.PLACE_IN_OBJECT,
+                'take': ActionType.TAKE_FROM_OBJECT,
+                'put': ActionType.PUT_IN_OBJECT,
+                # Crafting
+                'combine': ActionType.COMBINE_WITH_OBJECT,
+                'craft': ActionType.CRAFT_AT_OBJECT,
+                'cook': ActionType.COOK_AT_OBJECT,
+                'repair': ActionType.REPAIR_OBJECT,
+                # Destruction
+                'destroy': ActionType.DESTROY_OBJECT,
+                'break': ActionType.BREAK_OBJECT,
+                'dismantle': ActionType.DISMANTLE_OBJECT,
+                # Other
+                'use': ActionType.USE_OBJECT,
             }
             
             handler_action_type = action_type_map.get(action_type, ActionType.EXAMINE_OBJECT)

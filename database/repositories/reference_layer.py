@@ -161,6 +161,39 @@ class ReferenceLayerRepository:
                 runtime_cell_id
             )
             return dict(row) if row else None
+    
+    async def get_cell_reference_by_game_id(self, game_cell_id: str, session_id: str) -> Optional[Dict[str, Any]]:
+        """게임 셀 ID와 세션 ID로 셀 참조 정보를 조회합니다."""
+        pool = await self.db.pool
+        async with pool.acquire() as conn:
+            row = await conn.fetchrow(
+                """
+                SELECT * FROM reference_layer.cell_references 
+                WHERE game_cell_id = $1 AND session_id = $2
+                """, 
+                game_cell_id,
+                session_id
+            )
+            return dict(row) if row else None
+    
+    async def get_or_create_cell_reference(self, game_cell_id: str, session_id: str) -> Dict[str, Any]:
+        """게임 셀 ID로 셀 참조를 조회하거나 생성합니다."""
+        # 먼저 조회 시도
+        existing = await self.get_cell_reference_by_game_id(game_cell_id, session_id)
+        if existing:
+            return existing
+        
+        # 없으면 생성
+        import uuid
+        runtime_cell_id = str(uuid.uuid4())
+        await self.create_cell_reference({
+            'runtime_cell_id': runtime_cell_id,
+            'game_cell_id': game_cell_id,
+            'session_id': session_id
+        })
+        
+        # 생성된 참조 반환
+        return await self.get_cell_reference(runtime_cell_id)
 
     async def get_cell_references_by_session(self, session_id: str) -> List[Dict[str, Any]]:
         """세션 ID로 모든 셀 참조를 조회합니다."""

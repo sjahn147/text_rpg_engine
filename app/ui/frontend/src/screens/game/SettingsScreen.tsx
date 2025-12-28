@@ -47,7 +47,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onClose }) => {
   };
 
   const handleSave = () => {
-    // TODO: 설정 저장 API 호출 또는 localStorage 저장
+    // localStorage에 저장 (서버 동기화는 선택사항)
     localStorage.setItem('gameSettings', JSON.stringify(settings));
     setHasChanges(false);
     alert('설정이 저장되었습니다.');

@@ -5,6 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../../store/gameStore';
 import { gameApi } from '../../services/gameApi';
+import { useGameNavigation } from '../../hooks/game/useGameNavigation';
 
 interface SaveLoadScreenProps {
   onClose: () => void;
@@ -22,7 +23,7 @@ interface SaveSlot {
 }
 
 export const SaveLoadScreen: React.FC<SaveLoadScreenProps> = ({ onClose, mode }) => {
-  const { gameState } = useGameStore();
+  const { gameState, setGameState } = useGameStore();
   const [slots, setSlots] = useState<SaveSlot[]>([]);
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
@@ -33,27 +34,30 @@ export const SaveLoadScreen: React.FC<SaveLoadScreenProps> = ({ onClose, mode })
   }, []);
 
   const loadSaveSlots = async () => {
-    // TODO: 저장 슬롯 목록 API 호출
-    // 현재는 더미 데이터 사용
-    const dummySlots: SaveSlot[] = Array.from({ length: 10 }, (_, i) => ({
-      slot_id: i + 1,
-      is_empty: true,
-    }));
-    
-    // 첫 번째 슬롯에 현재 게임 상태 표시 (시뮬레이션)
-    if (gameState?.session_id) {
-      dummySlots[0] = {
-        slot_id: 1,
-        session_id: gameState.session_id,
-        player_name: '플레이어',
-        location: gameState.current_location || '알 수 없음',
-        play_time: gameState.play_time || 0,
-        save_date: new Date().toLocaleString('ko-KR'),
-        is_empty: false,
-      };
+    try {
+      setLoading(true);
+      const response = await gameApi.getSaveSlots();
+      if (response.success && response.slots) {
+        setSlots(response.slots);
+      } else {
+        // 빈 슬롯 생성
+        const emptySlots: SaveSlot[] = Array.from({ length: 10 }, (_, i) => ({
+          slot_id: i + 1,
+          is_empty: true,
+        }));
+        setSlots(emptySlots);
+      }
+    } catch (error) {
+      console.error('저장 슬롯 로드 실패:', error);
+      // 빈 슬롯 생성
+      const emptySlots: SaveSlot[] = Array.from({ length: 10 }, (_, i) => ({
+        slot_id: i + 1,
+        is_empty: true,
+      }));
+      setSlots(emptySlots);
+    } finally {
+      setLoading(false);
     }
-    
-    setSlots(dummySlots);
   };
 
   const handleSave = async (slotId: number) => {
@@ -66,30 +70,17 @@ export const SaveLoadScreen: React.FC<SaveLoadScreenProps> = ({ onClose, mode })
       setLoading(true);
       setError(null);
       
-      // TODO: 저장 API 호출
-      // await gameApi.saveGame(gameState.session_id, slotId);
+      await gameApi.saveGame(gameState.session_id, slotId);
       
-      console.log('게임 저장:', slotId, gameState.session_id);
-      
-      // 슬롯 업데이트
-      const updatedSlots = [...slots];
-      updatedSlots[slotId - 1] = {
-        slot_id: slotId,
-        session_id: gameState.session_id,
-        player_name: '플레이어',
-        location: gameState.current_location || '알 수 없음',
-        play_time: gameState.play_time || 0,
-        save_date: new Date().toLocaleString('ko-KR'),
-        is_empty: false,
-      };
-      setSlots(updatedSlots);
+      // 슬롯 목록 새로고침
+      await loadSaveSlots();
       
       // 성공 메시지
       alert('게임이 저장되었습니다.');
       onClose();
     } catch (err) {
       console.error('저장 실패:', err);
-      setError('게임 저장에 실패했습니다.');
+      setError('게임 저장에 실패했습니다: ' + ((err as any).response?.data?.detail || (err as Error).message));
     } finally {
       setLoading(false);
     }
@@ -106,17 +97,23 @@ export const SaveLoadScreen: React.FC<SaveLoadScreenProps> = ({ onClose, mode })
       setLoading(true);
       setError(null);
       
-      // TODO: 불러오기 API 호출
-      // await gameApi.loadGame(slot.session_id);
+      const result = await gameApi.loadGame(slotId);
       
-      console.log('게임 불러오기:', slotId, slot.session_id);
-      
-      // 성공 메시지
-      alert('게임을 불러왔습니다.');
-      onClose();
+      if (result.success && result.session_id) {
+        // 게임 상태 업데이트
+        if (result.game_state) {
+          setGameState(result.game_state);
+        }
+        
+        // 성공 메시지
+        alert('게임을 불러왔습니다.');
+        onClose();
+      } else {
+        setError('게임을 불러올 수 없습니다.');
+      }
     } catch (err) {
       console.error('불러오기 실패:', err);
-      setError('게임 불러오기에 실패했습니다.');
+      setError('게임 불러오기에 실패했습니다: ' + ((err as any).response?.data?.detail || (err as Error).message));
     } finally {
       setLoading(false);
     }
@@ -136,19 +133,13 @@ export const SaveLoadScreen: React.FC<SaveLoadScreenProps> = ({ onClose, mode })
       setLoading(true);
       setError(null);
       
-      // TODO: 삭제 API 호출
-      // await gameApi.deleteSave(slotId);
+      await gameApi.deleteSave(slotId);
       
-      // 슬롯 업데이트
-      const updatedSlots = [...slots];
-      updatedSlots[slotId - 1] = {
-        slot_id: slotId,
-        is_empty: true,
-      };
-      setSlots(updatedSlots);
+      // 슬롯 목록 새로고침
+      await loadSaveSlots();
     } catch (err) {
       console.error('삭제 실패:', err);
-      setError('저장 데이터 삭제에 실패했습니다.');
+      setError('저장 데이터 삭제에 실패했습니다: ' + ((err as any).response?.data?.detail || (err as Error).message));
     } finally {
       setLoading(false);
     }
