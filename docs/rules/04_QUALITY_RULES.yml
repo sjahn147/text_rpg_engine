@@ -1,0 +1,98 @@
+# RPG Engine Quality Enforcement Rules
+# 이 파일은 에이전트 및 CI 시스템이 따라야 하는 자동 품질 규약이다.
+
+version: 1.0
+
+standards:
+  coverage:
+    minimum: 0.80           # 테스트 커버리지 80% 미만 시 병합 차단
+    priority: SHOULD
+  type_check:
+    required: true
+    tool: mypy
+    error_on_any: true      # Any 타입 사용 시 경고가 아닌 오류 처리
+    priority: MUST
+  lint:
+    tool: flake8
+    max_warnings: 0
+    priority: SHOULD
+  format:
+    required: true
+    tools: ["black", "isort"]
+    priority: SHOULD
+
+database_rules:
+  require_confirmation: true     # DB 수정 작업 시 Human Confirm 필요
+  schema_change_block: true      # DROP, ALTER, TRUNCATE 전면 차단
+  priority: MUST
+  dangerous_sql_patterns:
+    - "DELETE FROM"
+    - "DROP TABLE"
+    - "TRUNCATE"
+    - "ALTER TABLE"
+  linked_anti_patterns:
+    - SQL_STRING_CONCAT
+    - UNCONFIRMED_DB_WRITE
+
+forbidden_patterns:
+  code:
+    - "eval("
+    - "exec("
+    - "global "
+    - "except:"
+    - "except Exception"
+    - "print("
+    - "f\"SELECT *"
+  priority: MUST
+  linked_anti_patterns:
+    - BROAD_EXCEPTION
+    - GLOBAL_STATE
+    - STRING_SQL
+  comments:
+    - "TODO:"                     # 해결되지 않은 코드 금지
+    - "FIXME:"
+    - "HACK:"
+  comments_priority: SHOULD
+
+immutability_rules:
+  disallow_inplace_mutation: true   # 리스트, 딕트 등 in-place 수정 금지
+  allow_dataclass_frozen: true
+  priority: SHOULD
+
+async_rules:
+  block_sync_io: true               # requests, sync DB 커넥션 등 금지
+  required_libraries:
+    - "asyncio"
+    - "aiohttp"
+    - "asyncpg"
+  priority: MUST
+
+test_rules:
+  require_test_for_all_public_code: true
+  require_red_phase_before_implementation: true
+  enforce_mocking_for_external_calls: true
+  priority: MUST
+
+refactor_triggers:
+  max_function_length: 50
+  max_nesting_depth: 3
+  duplicate_code_check: true
+  priority: SHOULD
+
+critical_violation_actions:
+  - violation: "global_state"
+    action: "block_pr"
+  - violation: "db_schema_modification"
+    action: "require_human_confirm"
+  - violation: "type_unsafe"
+    action: "block_pr"
+  - violation: "untested_code"
+    action: "block_pr"
+
+reporting:
+  generate_quality_summary: true
+  required_sections:
+    - "lint"
+    - "type_check"
+    - "test_coverage"
+    - "security_risk"

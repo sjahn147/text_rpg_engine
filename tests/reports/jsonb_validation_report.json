@@ -1,0 +1,178 @@
+{
+  "validation_date": "2025-10-19T13:53:46.034804",
+  "total_schemas": 4,
+  "total_errors": 0,
+  "schemas": {
+    "entity_properties": {
+      "table_name": "entities",
+      "column_name": "entity_properties",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "personality": {
+            "type": "string"
+          },
+          "alignment": {
+            "type": "string"
+          },
+          "background": {
+            "type": "string"
+          },
+          "position": {
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "number"
+              },
+              "y": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "x",
+              "y"
+            ]
+          },
+          "status": {
+            "type": "string"
+          },
+          "level": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "experience": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "required_fields": [
+        "personality",
+        "position"
+      ],
+      "optional_fields": [
+        "alignment",
+        "background",
+        "status",
+        "level",
+        "experience"
+      ]
+    },
+    "dialogue_contexts": {
+      "table_name": "dialogue_contexts",
+      "column_name": "available_topics",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "topics": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "default_topic": {
+            "type": "string"
+          },
+          "priority": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "topics"
+        ]
+      },
+      "required_fields": [
+        "topics"
+      ],
+      "optional_fields": [
+        "default_topic",
+        "priority"
+      ]
+    },
+    "effect_carriers": {
+      "table_name": "effect_carriers",
+      "column_name": "effect_json",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "effect_type": {
+            "type": "string"
+          },
+          "magnitude": {
+            "type": "number"
+          },
+          "duration": {
+            "type": "integer"
+          },
+          "target": {
+            "type": "string"
+          },
+          "conditions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "effect_type",
+          "magnitude"
+        ]
+      },
+      "required_fields": [
+        "effect_type",
+        "magnitude"
+      ],
+      "optional_fields": [
+        "duration",
+        "target",
+        "conditions"
+      ]
+    },
+    "cell_properties": {
+      "table_name": "world_cells",
+      "column_name": "cell_properties",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "terrain": {
+            "type": "string"
+          },
+          "lighting": {
+            "type": "string"
+          },
+          "temperature": {
+            "type": "number"
+          },
+          "humidity": {
+            "type": "number"
+          },
+          "accessibility": {
+            "type": "boolean"
+          },
+          "special_properties": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "required_fields": [
+        "terrain",
+        "lighting"
+      ],
+      "optional_fields": [
+        "temperature",
+        "humidity",
+        "accessibility",
+        "special_properties"
+      ]
+    }
+  },
+  "validation_errors": [],
+  "recommendations": [
+    "추가 JSONB 스키마 정의 필요"
+  ]
+}

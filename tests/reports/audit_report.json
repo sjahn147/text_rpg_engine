@@ -1,0 +1,4114 @@
+{
+  "audit_date": "2025-10-19T13:52:52.800077",
+  "total_tables": 41,
+  "schemas": {
+    "game_data": 20,
+    "reference_layer": 4,
+    "runtime_data": 17
+  },
+  "total_columns": 312,
+  "total_constraints": 227,
+  "tables": {
+    "game_data.abilities_magic": {
+      "columns": [
+        {
+          "column_name": "magic_id",
+          "data_type": "character varying",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": 50
+        },
+        {
+          "column_name": "base_property_id",
+          "data_type": "character varying",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": 50
+        },
+        {
+          "column_name": "mana_cost",
+          "data_type": "integer",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "cast_time",
+          "data_type": "integer",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "magic_school",
+          "data_type": "character varying",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": 50
+        },
+        {
+          "column_name": "magic_properties",
+          "data_type": "jsonb",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "created_at",
+          "data_type": "timestamp without time zone",
+          "is_nullable": "YES",
+          "column_default": "CURRENT_TIMESTAMP",
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "updated_at",
+          "data_type": "timestamp without time zone",
+          "is_nullable": "YES",
+          "column_default": "CURRENT_TIMESTAMP",
+          "character_maximum_length": null
+        }
+      ],
+      "constraints": [
+        {
+          "constraint_name": "abilities_magic_pkey",
+          "constraint_type": "PRIMARY KEY",
+          "column_name": "magic_id",
+          "foreign_table_name": "abilities_magic",
+          "foreign_column_name": "magic_id"
+        },
+        {
+          "constraint_name": "abilities_magic_base_property_id_fkey",
+          "constraint_type": "FOREIGN KEY",
+          "column_name": "base_property_id",
+          "foreign_table_name": "base_properties",
+          "foreign_column_name": "property_id"
+        },
+        {
+          "constraint_name": "23040_23162_1_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        },
+        {
+          "constraint_name": "23040_23162_2_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        }
+      ],
+      "column_count": 8,
+      "constraint_count": 4
+    },
+    "game_data.abilities_skills": {
+      "columns": [
+        {
+          "column_name": "skill_id",
+          "data_type": "character varying",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": 50
+        },
+        {
+          "column_name": "base_property_id",
+          "data_type": "character varying",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": 50
+        },
+        {
+          "column_name": "cooldown",
+          "data_type": "integer",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "skill_type",
+          "data_type": "character varying",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": 50
+        },
+        {
+          "column_name": "skill_properties",
+          "data_type": "jsonb",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "created_at",
+          "data_type": "timestamp without time zone",
+          "is_nullable": "YES",
+          "column_default": "CURRENT_TIMESTAMP",
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "updated_at",
+          "data_type": "timestamp without time zone",
+          "is_nullable": "YES",
+          "column_default": "CURRENT_TIMESTAMP",
+          "character_maximum_length": null
+        }
+      ],
+      "constraints": [
+        {
+          "constraint_name": "abilities_skills_pkey",
+          "constraint_type": "PRIMARY KEY",
+          "column_name": "skill_id",
+          "foreign_table_name": "abilities_skills",
+          "foreign_column_name": "skill_id"
+        },
+        {
+          "constraint_name": "abilities_skills_base_property_id_fkey",
+          "constraint_type": "FOREIGN KEY",
+          "column_name": "base_property_id",
+          "foreign_table_name": "base_properties",
+          "foreign_column_name": "property_id"
+        },
+        {
+          "constraint_name": "23040_23177_1_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        },
+        {
+          "constraint_name": "23040_23177_2_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        }
+      ],
+      "column_count": 7,
+      "constraint_count": 4
+    },
+    "game_data.base_properties": {
+      "columns": [
+        {
+          "column_name": "property_id",
+          "data_type": "character varying",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": 50
+        },
+        {
+          "column_name": "name",
+          "data_type": "character varying",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": 100
+        },
+        {
+          "column_name": "description",
+          "data_type": "text",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "type",
+          "data_type": "character varying",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": 50
+        },
+        {
+          "column_name": "base_effects",
+          "data_type": "jsonb",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "requirements",
+          "data_type": "jsonb",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "created_at",
+          "data_type": "timestamp without time zone",
+          "is_nullable": "YES",
+          "column_default": "CURRENT_TIMESTAMP",
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "updated_at",
+          "data_type": "timestamp without time zone",
+          "is_nullable": "YES",
+          "column_default": "CURRENT_TIMESTAMP",
+          "character_maximum_length": null
+        }
+      ],
+      "constraints": [
+        {
+          "constraint_name": "base_properties_pkey",
+          "constraint_type": "PRIMARY KEY",
+          "column_name": "property_id",
+          "foreign_table_name": "base_properties",
+          "foreign_column_name": "property_id"
+        },
+        {
+          "constraint_name": "23040_23152_1_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        },
+        {
+          "constraint_name": "23040_23152_2_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        },
+        {
+          "constraint_name": "23040_23152_4_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        }
+      ],
+      "column_count": 8,
+      "constraint_count": 4
+    },
+    "game_data.default_values": {
+      "columns": [
+        {
+          "column_name": "setting_id",
+          "data_type": "character varying",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": 50
+        },
+        {
+          "column_name": "category",
+          "data_type": "character varying",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": 50
+        },
+        {
+          "column_name": "setting_name",
+          "data_type": "character varying",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": 100
+        },
+        {
+          "column_name": "setting_value",
+          "data_type": "jsonb",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "description",
+          "data_type": "text",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "is_active",
+          "data_type": "boolean",
+          "is_nullable": "YES",
+          "column_default": "true",
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "created_at",
+          "data_type": "timestamp without time zone",
+          "is_nullable": "YES",
+          "column_default": "CURRENT_TIMESTAMP",
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "updated_at",
+          "data_type": "timestamp without time zone",
+          "is_nullable": "YES",
+          "column_default": "CURRENT_TIMESTAMP",
+          "character_maximum_length": null
+        }
+      ],
+      "constraints": [
+        {
+          "constraint_name": "default_values_pkey",
+          "constraint_type": "PRIMARY KEY",
+          "column_name": "setting_id",
+          "foreign_table_name": "default_values",
+          "foreign_column_name": "setting_id"
+        },
+        {
+          "constraint_name": "23040_23743_1_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        },
+        {
+          "constraint_name": "23040_23743_2_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        },
+        {
+          "constraint_name": "23040_23743_3_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        },
+        {
+          "constraint_name": "23040_23743_4_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        }
+      ],
+      "column_count": 8,
+      "constraint_count": 5
+    },
+    "game_data.dialogue_contexts": {
+      "columns": [
+        {
+          "column_name": "dialogue_id",
+          "data_type": "character varying",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": 50
+        },
+        {
+          "column_name": "title",
+          "data_type": "character varying",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": 100
+        },
+        {
+          "column_name": "content",
+          "data_type": "text",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "entity_id",
+          "data_type": "character varying",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": 50
+        },
+        {
+          "column_name": "cell_id",
+          "data_type": "character varying",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": 50
+        },
+        {
+          "column_name": "time_category",
+          "data_type": "character varying",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": 20
+        },
+        {
+          "column_name": "event_id",
+          "data_type": "character varying",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": 50
+        },
+        {
+          "column_name": "priority",
+          "data_type": "integer",
+          "is_nullable": "YES",
+          "column_default": "0",
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "available_topics",
+          "data_type": "jsonb",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "entity_personality",
+          "data_type": "text",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "constraints",
+          "data_type": "jsonb",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "created_at",
+          "data_type": "timestamp without time zone",
+          "is_nullable": "YES",
+          "column_default": "CURRENT_TIMESTAMP",
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "updated_at",
+          "data_type": "timestamp without time zone",
+          "is_nullable": "YES",
+          "column_default": "CURRENT_TIMESTAMP",
+          "character_maximum_length": null
+        }
+      ],
+      "constraints": [
+        {
+          "constraint_name": "dialogue_contexts_pkey",
+          "constraint_type": "PRIMARY KEY",
+          "column_name": "dialogue_id",
+          "foreign_table_name": "dialogue_contexts",
+          "foreign_column_name": "dialogue_id"
+        },
+        {
+          "constraint_name": "23040_23084_1_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        },
+        {
+          "constraint_name": "23040_23084_2_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        },
+        {
+          "constraint_name": "23040_23084_3_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        }
+      ],
+      "column_count": 13,
+      "constraint_count": 4
+    },
+    "game_data.dialogue_knowledge": {
+      "columns": [
+        {
+          "column_name": "knowledge_id",
+          "data_type": "character varying",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": 50
+        },
+        {
+          "column_name": "title",
+          "data_type": "character varying",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": 100
+        },
+        {
+          "column_name": "content",
+          "data_type": "text",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "knowledge_type",
+          "data_type": "character varying",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": 50
+        },
+        {
+          "column_name": "related_entities",
+          "data_type": "jsonb",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "related_topics",
+          "data_type": "jsonb",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "knowledge_properties",
+          "data_type": "jsonb",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "created_at",
+          "data_type": "timestamp without time zone",
+          "is_nullable": "YES",
+          "column_default": "CURRENT_TIMESTAMP",
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "updated_at",
+          "data_type": "timestamp without time zone",
+          "is_nullable": "YES",
+          "column_default": "CURRENT_TIMESTAMP",
+          "character_maximum_length": null
+        }
+      ],
+      "constraints": [
+        {
+          "constraint_name": "dialogue_knowledge_pkey",
+          "constraint_type": "PRIMARY KEY",
+          "column_name": "knowledge_id",
+          "foreign_table_name": "dialogue_knowledge",
+          "foreign_column_name": "knowledge_id"
+        },
+        {
+          "constraint_name": "23040_23112_1_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        },
+        {
+          "constraint_name": "23040_23112_2_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        },
+        {
+          "constraint_name": "23040_23112_3_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        },
+        {
+          "constraint_name": "23040_23112_4_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        }
+      ],
+      "column_count": 9,
+      "constraint_count": 5
+    },
+    "game_data.dialogue_topics": {
+      "columns": [
+        {
+          "column_name": "topic_id",
+          "data_type": "character varying",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": 50
+        },
+        {
+          "column_name": "dialogue_id",
+          "data_type": "character varying",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": 50
+        },
+        {
+          "column_name": "topic_type",
+          "data_type": "character varying",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": 50
+        },
+        {
+          "column_name": "content",
+          "data_type": "text",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "conditions",
+          "data_type": "jsonb",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "created_at",
+          "data_type": "timestamp without time zone",
+          "is_nullable": "YES",
+          "column_default": "CURRENT_TIMESTAMP",
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "updated_at",
+          "data_type": "timestamp without time zone",
+          "is_nullable": "YES",
+          "column_default": "CURRENT_TIMESTAMP",
+          "character_maximum_length": null
+        }
+      ],
+      "constraints": [
+        {
+          "constraint_name": "dialogue_topics_pkey",
+          "constraint_type": "PRIMARY KEY",
+          "column_name": "topic_id",
+          "foreign_table_name": "dialogue_topics",
+          "foreign_column_name": "topic_id"
+        },
+        {
+          "constraint_name": "dialogue_topics_dialogue_id_fkey",
+          "constraint_type": "FOREIGN KEY",
+          "column_name": "dialogue_id",
+          "foreign_table_name": "dialogue_contexts",
+          "foreign_column_name": "dialogue_id"
+        },
+        {
+          "constraint_name": "23040_23096_1_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        },
+        {
+          "constraint_name": "23040_23096_2_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        }
+      ],
+      "column_count": 7,
+      "constraint_count": 4
+    },
+    "game_data.effect_carriers": {
+      "columns": [
+        {
+          "column_name": "effect_id",
+          "data_type": "uuid",
+          "is_nullable": "NO",
+          "column_default": "uuid_generate_v4()",
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "name",
+          "data_type": "character varying",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": 100
+        },
+        {
+          "column_name": "carrier_type",
+          "data_type": "character varying",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": 20
+        },
+        {
+          "column_name": "effect_json",
+          "data_type": "jsonb",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "constraints_json",
+          "data_type": "jsonb",
+          "is_nullable": "YES",
+          "column_default": "'{}'::jsonb",
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "source_entity_id",
+          "data_type": "character varying",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": 50
+        },
+        {
+          "column_name": "tags",
+          "data_type": "ARRAY",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "created_at",
+          "data_type": "timestamp without time zone",
+          "is_nullable": "YES",
+          "column_default": "CURRENT_TIMESTAMP",
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "updated_at",
+          "data_type": "timestamp without time zone",
+          "is_nullable": "YES",
+          "column_default": "CURRENT_TIMESTAMP",
+          "character_maximum_length": null
+        }
+      ],
+      "constraints": [
+        {
+          "constraint_name": "effect_carriers_carrier_type_check",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": "effect_carriers",
+          "foreign_column_name": "carrier_type"
+        },
+        {
+          "constraint_name": "effect_carriers_pkey",
+          "constraint_type": "PRIMARY KEY",
+          "column_name": "effect_id",
+          "foreign_table_name": "effect_carriers",
+          "foreign_column_name": "effect_id"
+        },
+        {
+          "constraint_name": "effect_carriers_source_entity_id_fkey",
+          "constraint_type": "FOREIGN KEY",
+          "column_name": "source_entity_id",
+          "foreign_table_name": "entities",
+          "foreign_column_name": "entity_id"
+        },
+        {
+          "constraint_name": "23040_23662_1_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        },
+        {
+          "constraint_name": "23040_23662_2_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        },
+        {
+          "constraint_name": "23040_23662_3_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        },
+        {
+          "constraint_name": "23040_23662_4_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        }
+      ],
+      "column_count": 9,
+      "constraint_count": 7
+    },
+    "game_data.effects": {
+      "columns": [
+        {
+          "column_name": "effect_id",
+          "data_type": "character varying",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": 50
+        },
+        {
+          "column_name": "base_property_id",
+          "data_type": "character varying",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": 50
+        },
+        {
+          "column_name": "effect_type",
+          "data_type": "character varying",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": 50
+        },
+        {
+          "column_name": "duration",
+          "data_type": "integer",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "effect_properties",
+          "data_type": "jsonb",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "created_at",
+          "data_type": "timestamp without time zone",
+          "is_nullable": "YES",
+          "column_default": "CURRENT_TIMESTAMP",
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "updated_at",
+          "data_type": "timestamp without time zone",
+          "is_nullable": "YES",
+          "column_default": "CURRENT_TIMESTAMP",
+          "character_maximum_length": null
+        }
+      ],
+      "constraints": [
+        {
+          "constraint_name": "effects_pkey",
+          "constraint_type": "PRIMARY KEY",
+          "column_name": "effect_id",
+          "foreign_table_name": "effects",
+          "foreign_column_name": "effect_id"
+        },
+        {
+          "constraint_name": "effects_base_property_id_fkey",
+          "constraint_type": "FOREIGN KEY",
+          "column_name": "base_property_id",
+          "foreign_table_name": "base_properties",
+          "foreign_column_name": "property_id"
+        },
+        {
+          "constraint_name": "23040_23192_1_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        },
+        {
+          "constraint_name": "23040_23192_2_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        }
+      ],
+      "column_count": 7,
+      "constraint_count": 4
+    },
+    "game_data.entities": {
+      "columns": [
+        {
+          "column_name": "entity_id",
+          "data_type": "character varying",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": 50
+        },
+        {
+          "column_name": "entity_type",
+          "data_type": "character varying",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": 50
+        },
+        {
+          "column_name": "entity_name",
+          "data_type": "character varying",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": 100
+        },
+        {
+          "column_name": "entity_description",
+          "data_type": "text",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "base_stats",
+          "data_type": "jsonb",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "default_equipment",
+          "data_type": "jsonb",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "default_abilities",
+          "data_type": "jsonb",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "default_inventory",
+          "data_type": "jsonb",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "entity_properties",
+          "data_type": "jsonb",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "dialogue_context_id",
+          "data_type": "character varying",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": 50
+        },
+        {
+          "column_name": "created_at",
+          "data_type": "timestamp without time zone",
+          "is_nullable": "YES",
+          "column_default": "CURRENT_TIMESTAMP",
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "updated_at",
+          "data_type": "timestamp without time zone",
+          "is_nullable": "YES",
+          "column_default": "CURRENT_TIMESTAMP",
+          "character_maximum_length": null
+        }
+      ],
+      "constraints": [
+        {
+          "constraint_name": "entities_pkey",
+          "constraint_type": "PRIMARY KEY",
+          "column_name": "entity_id",
+          "foreign_table_name": "entities",
+          "foreign_column_name": "entity_id"
+        },
+        {
+          "constraint_name": "entities_dialogue_context_id_fkey",
+          "constraint_type": "FOREIGN KEY",
+          "column_name": "dialogue_context_id",
+          "foreign_table_name": "dialogue_contexts",
+          "foreign_column_name": "dialogue_id"
+        },
+        {
+          "constraint_name": "23040_23122_1_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        },
+        {
+          "constraint_name": "23040_23122_2_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        },
+        {
+          "constraint_name": "23040_23122_3_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        }
+      ],
+      "column_count": 12,
+      "constraint_count": 5
+    },
+    "game_data.entity_behavior_schedules": {
+      "columns": [
+        {
+          "column_name": "schedule_id",
+          "data_type": "uuid",
+          "is_nullable": "NO",
+          "column_default": "uuid_generate_v4()",
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "entity_id",
+          "data_type": "character varying",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": 50
+        },
+        {
+          "column_name": "time_period",
+          "data_type": "character varying",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": 20
+        },
+        {
+          "column_name": "action_type",
+          "data_type": "character varying",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": 50
+        },
+        {
+          "column_name": "action_priority",
+          "data_type": "integer",
+          "is_nullable": "YES",
+          "column_default": "1",
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "conditions",
+          "data_type": "jsonb",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "action_data",
+          "data_type": "jsonb",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "created_at",
+          "data_type": "timestamp without time zone",
+          "is_nullable": "YES",
+          "column_default": "CURRENT_TIMESTAMP",
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "updated_at",
+          "data_type": "timestamp without time zone",
+          "is_nullable": "YES",
+          "column_default": "CURRENT_TIMESTAMP",
+          "character_maximum_length": null
+        }
+      ],
+      "constraints": [
+        {
+          "constraint_name": "entity_behavior_schedules_pkey",
+          "constraint_type": "PRIMARY KEY",
+          "column_name": "schedule_id",
+          "foreign_table_name": "entity_behavior_schedules",
+          "foreign_column_name": "schedule_id"
+        },
+        {
+          "constraint_name": "entity_behavior_schedules_entity_id_fkey",
+          "constraint_type": "FOREIGN KEY",
+          "column_name": "entity_id",
+          "foreign_table_name": "entities",
+          "foreign_column_name": "entity_id"
+        },
+        {
+          "constraint_name": "23040_23560_1_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        },
+        {
+          "constraint_name": "23040_23560_2_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        },
+        {
+          "constraint_name": "23040_23560_3_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        },
+        {
+          "constraint_name": "23040_23560_4_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        }
+      ],
+      "column_count": 9,
+      "constraint_count": 6
+    },
+    "game_data.equipment_armors": {
+      "columns": [
+        {
+          "column_name": "armor_id",
+          "data_type": "character varying",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": 50
+        },
+        {
+          "column_name": "base_property_id",
+          "data_type": "character varying",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": 50
+        },
+        {
+          "column_name": "defense",
+          "data_type": "integer",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "armor_type",
+          "data_type": "character varying",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": 50
+        },
+        {
+          "column_name": "weight",
+          "data_type": "integer",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "armor_properties",
+          "data_type": "jsonb",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "created_at",
+          "data_type": "timestamp without time zone",
+          "is_nullable": "YES",
+          "column_default": "CURRENT_TIMESTAMP",
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "updated_at",
+          "data_type": "timestamp without time zone",
+          "is_nullable": "YES",
+          "column_default": "CURRENT_TIMESTAMP",
+          "character_maximum_length": null
+        }
+      ],
+      "constraints": [
+        {
+          "constraint_name": "equipment_armors_pkey",
+          "constraint_type": "PRIMARY KEY",
+          "column_name": "armor_id",
+          "foreign_table_name": "equipment_armors",
+          "foreign_column_name": "armor_id"
+        },
+        {
+          "constraint_name": "equipment_armors_base_property_id_fkey",
+          "constraint_type": "FOREIGN KEY",
+          "column_name": "base_property_id",
+          "foreign_table_name": "base_properties",
+          "foreign_column_name": "property_id"
+        },
+        {
+          "constraint_name": "23040_23222_1_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        },
+        {
+          "constraint_name": "23040_23222_2_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        }
+      ],
+      "column_count": 8,
+      "constraint_count": 4
+    },
+    "game_data.equipment_weapons": {
+      "columns": [
+        {
+          "column_name": "weapon_id",
+          "data_type": "character varying",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": 50
+        },
+        {
+          "column_name": "base_property_id",
+          "data_type": "character varying",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": 50
+        },
+        {
+          "column_name": "damage",
+          "data_type": "integer",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "weapon_type",
+          "data_type": "character varying",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": 50
+        },
+        {
+          "column_name": "durability",
+          "data_type": "integer",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "weapon_properties",
+          "data_type": "jsonb",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "created_at",
+          "data_type": "timestamp without time zone",
+          "is_nullable": "YES",
+          "column_default": "CURRENT_TIMESTAMP",
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "updated_at",
+          "data_type": "timestamp without time zone",
+          "is_nullable": "YES",
+          "column_default": "CURRENT_TIMESTAMP",
+          "character_maximum_length": null
+        }
+      ],
+      "constraints": [
+        {
+          "constraint_name": "equipment_weapons_pkey",
+          "constraint_type": "PRIMARY KEY",
+          "column_name": "weapon_id",
+          "foreign_table_name": "equipment_weapons",
+          "foreign_column_name": "weapon_id"
+        },
+        {
+          "constraint_name": "equipment_weapons_base_property_id_fkey",
+          "constraint_type": "FOREIGN KEY",
+          "column_name": "base_property_id",
+          "foreign_table_name": "base_properties",
+          "foreign_column_name": "property_id"
+        },
+        {
+          "constraint_name": "23040_23207_1_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        },
+        {
+          "constraint_name": "23040_23207_2_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        }
+      ],
+      "column_count": 8,
+      "constraint_count": 4
+    },
+    "game_data.events": {
+      "columns": [
+        {
+          "column_name": "event_id",
+          "data_type": "character varying",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": 50
+        },
+        {
+          "column_name": "name",
+          "data_type": "character varying",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": 100
+        },
+        {
+          "column_name": "type",
+          "data_type": "character varying",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": 50
+        },
+        {
+          "column_name": "properties",
+          "data_type": "jsonb",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "created_at",
+          "data_type": "timestamp without time zone",
+          "is_nullable": "YES",
+          "column_default": "CURRENT_TIMESTAMP",
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "updated_at",
+          "data_type": "timestamp without time zone",
+          "is_nullable": "YES",
+          "column_default": "CURRENT_TIMESTAMP",
+          "character_maximum_length": null
+        }
+      ],
+      "constraints": [
+        {
+          "constraint_name": "events_pkey",
+          "constraint_type": "PRIMARY KEY",
+          "column_name": "event_id",
+          "foreign_table_name": "events",
+          "foreign_column_name": "event_id"
+        },
+        {
+          "constraint_name": "23040_23712_1_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        },
+        {
+          "constraint_name": "23040_23712_2_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        },
+        {
+          "constraint_name": "23040_23712_3_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        }
+      ],
+      "column_count": 6,
+      "constraint_count": 4
+    },
+    "game_data.items": {
+      "columns": [
+        {
+          "column_name": "item_id",
+          "data_type": "character varying",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": 50
+        },
+        {
+          "column_name": "base_property_id",
+          "data_type": "character varying",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": 50
+        },
+        {
+          "column_name": "item_type",
+          "data_type": "character varying",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": 50
+        },
+        {
+          "column_name": "stack_size",
+          "data_type": "integer",
+          "is_nullable": "YES",
+          "column_default": "1",
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "consumable",
+          "data_type": "boolean",
+          "is_nullable": "YES",
+          "column_default": "false",
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "item_properties",
+          "data_type": "jsonb",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "created_at",
+          "data_type": "timestamp without time zone",
+          "is_nullable": "YES",
+          "column_default": "CURRENT_TIMESTAMP",
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "updated_at",
+          "data_type": "timestamp without time zone",
+          "is_nullable": "YES",
+          "column_default": "CURRENT_TIMESTAMP",
+          "character_maximum_length": null
+        }
+      ],
+      "constraints": [
+        {
+          "constraint_name": "items_pkey",
+          "constraint_type": "PRIMARY KEY",
+          "column_name": "item_id",
+          "foreign_table_name": "items",
+          "foreign_column_name": "item_id"
+        },
+        {
+          "constraint_name": "items_base_property_id_fkey",
+          "constraint_type": "FOREIGN KEY",
+          "column_name": "base_property_id",
+          "foreign_table_name": "base_properties",
+          "foreign_column_name": "property_id"
+        },
+        {
+          "constraint_name": "23040_23237_1_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        },
+        {
+          "constraint_name": "23040_23237_2_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        }
+      ],
+      "column_count": 8,
+      "constraint_count": 4
+    },
+    "game_data.time_events": {
+      "columns": [
+        {
+          "column_name": "event_id",
+          "data_type": "uuid",
+          "is_nullable": "NO",
+          "column_default": "uuid_generate_v4()",
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "event_name",
+          "data_type": "character varying",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": 100
+        },
+        {
+          "column_name": "event_type",
+          "data_type": "character varying",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": 50
+        },
+        {
+          "column_name": "trigger_day",
+          "data_type": "integer",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "trigger_hour",
+          "data_type": "integer",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "trigger_minute",
+          "data_type": "integer",
+          "is_nullable": "YES",
+          "column_default": "0",
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "event_data",
+          "data_type": "jsonb",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "is_active",
+          "data_type": "boolean",
+          "is_nullable": "YES",
+          "column_default": "true",
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "created_at",
+          "data_type": "timestamp without time zone",
+          "is_nullable": "YES",
+          "column_default": "CURRENT_TIMESTAMP",
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "updated_at",
+          "data_type": "timestamp without time zone",
+          "is_nullable": "YES",
+          "column_default": "CURRENT_TIMESTAMP",
+          "character_maximum_length": null
+        }
+      ],
+      "constraints": [
+        {
+          "constraint_name": "time_events_pkey",
+          "constraint_type": "PRIMARY KEY",
+          "column_name": "event_id",
+          "foreign_table_name": "time_events",
+          "foreign_column_name": "event_id"
+        },
+        {
+          "constraint_name": "23040_23579_1_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        },
+        {
+          "constraint_name": "23040_23579_2_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        },
+        {
+          "constraint_name": "23040_23579_3_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        }
+      ],
+      "column_count": 10,
+      "constraint_count": 4
+    },
+    "game_data.world_cells": {
+      "columns": [
+        {
+          "column_name": "cell_id",
+          "data_type": "character varying",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": 50
+        },
+        {
+          "column_name": "location_id",
+          "data_type": "character varying",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": 50
+        },
+        {
+          "column_name": "cell_name",
+          "data_type": "character varying",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": 100
+        },
+        {
+          "column_name": "matrix_width",
+          "data_type": "integer",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "matrix_height",
+          "data_type": "integer",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "cell_description",
+          "data_type": "text",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "cell_properties",
+          "data_type": "jsonb",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "created_at",
+          "data_type": "timestamp without time zone",
+          "is_nullable": "YES",
+          "column_default": "CURRENT_TIMESTAMP",
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "updated_at",
+          "data_type": "timestamp without time zone",
+          "is_nullable": "YES",
+          "column_default": "CURRENT_TIMESTAMP",
+          "character_maximum_length": null
+        }
+      ],
+      "constraints": [
+        {
+          "constraint_name": "world_cells_pkey",
+          "constraint_type": "PRIMARY KEY",
+          "column_name": "cell_id",
+          "foreign_table_name": "world_cells",
+          "foreign_column_name": "cell_id"
+        },
+        {
+          "constraint_name": "world_cells_location_id_fkey",
+          "constraint_type": "FOREIGN KEY",
+          "column_name": "location_id",
+          "foreign_table_name": "world_locations",
+          "foreign_column_name": "location_id"
+        },
+        {
+          "constraint_name": "23040_23069_1_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        },
+        {
+          "constraint_name": "23040_23069_2_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        },
+        {
+          "constraint_name": "23040_23069_4_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        },
+        {
+          "constraint_name": "23040_23069_5_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        }
+      ],
+      "column_count": 9,
+      "constraint_count": 6
+    },
+    "game_data.world_locations": {
+      "columns": [
+        {
+          "column_name": "location_id",
+          "data_type": "character varying",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": 50
+        },
+        {
+          "column_name": "region_id",
+          "data_type": "character varying",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": 50
+        },
+        {
+          "column_name": "location_name",
+          "data_type": "character varying",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": 100
+        },
+        {
+          "column_name": "location_description",
+          "data_type": "text",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "location_type",
+          "data_type": "character varying",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": 50
+        },
+        {
+          "column_name": "location_properties",
+          "data_type": "jsonb",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "created_at",
+          "data_type": "timestamp without time zone",
+          "is_nullable": "YES",
+          "column_default": "CURRENT_TIMESTAMP",
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "updated_at",
+          "data_type": "timestamp without time zone",
+          "is_nullable": "YES",
+          "column_default": "CURRENT_TIMESTAMP",
+          "character_maximum_length": null
+        }
+      ],
+      "constraints": [
+        {
+          "constraint_name": "world_locations_pkey",
+          "constraint_type": "PRIMARY KEY",
+          "column_name": "location_id",
+          "foreign_table_name": "world_locations",
+          "foreign_column_name": "location_id"
+        },
+        {
+          "constraint_name": "world_locations_region_id_fkey",
+          "constraint_type": "FOREIGN KEY",
+          "column_name": "region_id",
+          "foreign_table_name": "world_regions",
+          "foreign_column_name": "region_id"
+        },
+        {
+          "constraint_name": "23040_23053_1_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        },
+        {
+          "constraint_name": "23040_23053_2_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        },
+        {
+          "constraint_name": "23040_23053_3_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        }
+      ],
+      "column_count": 8,
+      "constraint_count": 5
+    },
+    "game_data.world_objects": {
+      "columns": [
+        {
+          "column_name": "object_id",
+          "data_type": "character varying",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": 50
+        },
+        {
+          "column_name": "object_type",
+          "data_type": "character varying",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": 50
+        },
+        {
+          "column_name": "object_name",
+          "data_type": "character varying",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": 100
+        },
+        {
+          "column_name": "object_description",
+          "data_type": "text",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "default_cell_id",
+          "data_type": "character varying",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": 50
+        },
+        {
+          "column_name": "default_position",
+          "data_type": "jsonb",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "interaction_type",
+          "data_type": "character varying",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": 50
+        },
+        {
+          "column_name": "possible_states",
+          "data_type": "jsonb",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "properties",
+          "data_type": "jsonb",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "created_at",
+          "data_type": "timestamp without time zone",
+          "is_nullable": "YES",
+          "column_default": "CURRENT_TIMESTAMP",
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "updated_at",
+          "data_type": "timestamp without time zone",
+          "is_nullable": "YES",
+          "column_default": "CURRENT_TIMESTAMP",
+          "character_maximum_length": null
+        }
+      ],
+      "constraints": [
+        {
+          "constraint_name": "world_objects_pkey",
+          "constraint_type": "PRIMARY KEY",
+          "column_name": "object_id",
+          "foreign_table_name": "world_objects",
+          "foreign_column_name": "object_id"
+        },
+        {
+          "constraint_name": "world_objects_default_cell_id_fkey",
+          "constraint_type": "FOREIGN KEY",
+          "column_name": "default_cell_id",
+          "foreign_table_name": "world_cells",
+          "foreign_column_name": "cell_id"
+        },
+        {
+          "constraint_name": "23040_23137_1_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        },
+        {
+          "constraint_name": "23040_23137_2_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        },
+        {
+          "constraint_name": "23040_23137_3_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        }
+      ],
+      "column_count": 11,
+      "constraint_count": 5
+    },
+    "game_data.world_regions": {
+      "columns": [
+        {
+          "column_name": "region_id",
+          "data_type": "character varying",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": 50
+        },
+        {
+          "column_name": "region_name",
+          "data_type": "character varying",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": 100
+        },
+        {
+          "column_name": "region_description",
+          "data_type": "text",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "region_type",
+          "data_type": "character varying",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": 50
+        },
+        {
+          "column_name": "region_properties",
+          "data_type": "jsonb",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "created_at",
+          "data_type": "timestamp without time zone",
+          "is_nullable": "YES",
+          "column_default": "CURRENT_TIMESTAMP",
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "updated_at",
+          "data_type": "timestamp without time zone",
+          "is_nullable": "YES",
+          "column_default": "CURRENT_TIMESTAMP",
+          "character_maximum_length": null
+        }
+      ],
+      "constraints": [
+        {
+          "constraint_name": "world_regions_pkey",
+          "constraint_type": "PRIMARY KEY",
+          "column_name": "region_id",
+          "foreign_table_name": "world_regions",
+          "foreign_column_name": "region_id"
+        },
+        {
+          "constraint_name": "23040_23043_1_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        },
+        {
+          "constraint_name": "23040_23043_2_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        }
+      ],
+      "column_count": 7,
+      "constraint_count": 3
+    },
+    "reference_layer.cell_references": {
+      "columns": [
+        {
+          "column_name": "runtime_cell_id",
+          "data_type": "character varying",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": 50
+        },
+        {
+          "column_name": "game_cell_id",
+          "data_type": "character varying",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": 50
+        },
+        {
+          "column_name": "session_id",
+          "data_type": "uuid",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "cell_type",
+          "data_type": "character varying",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": 50
+        },
+        {
+          "column_name": "created_at",
+          "data_type": "timestamp without time zone",
+          "is_nullable": "YES",
+          "column_default": "CURRENT_TIMESTAMP",
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "updated_at",
+          "data_type": "timestamp without time zone",
+          "is_nullable": "YES",
+          "column_default": "CURRENT_TIMESTAMP",
+          "character_maximum_length": null
+        }
+      ],
+      "constraints": [
+        {
+          "constraint_name": "cell_references_pkey",
+          "constraint_type": "PRIMARY KEY",
+          "column_name": "runtime_cell_id",
+          "foreign_table_name": "cell_references",
+          "foreign_column_name": "runtime_cell_id"
+        },
+        {
+          "constraint_name": "cell_references_game_cell_id_fkey",
+          "constraint_type": "FOREIGN KEY",
+          "column_name": "game_cell_id",
+          "foreign_table_name": "world_cells",
+          "foreign_column_name": "cell_id"
+        },
+        {
+          "constraint_name": "23041_23272_1_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        },
+        {
+          "constraint_name": "23041_23272_2_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        },
+        {
+          "constraint_name": "23041_23272_3_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        },
+        {
+          "constraint_name": "23041_23272_4_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        }
+      ],
+      "column_count": 6,
+      "constraint_count": 6
+    },
+    "reference_layer.entity_effect_ownership": {
+      "columns": [
+        {
+          "column_name": "session_id",
+          "data_type": "uuid",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "runtime_entity_id",
+          "data_type": "uuid",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "effect_id",
+          "data_type": "uuid",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "acquired_at",
+          "data_type": "timestamp without time zone",
+          "is_nullable": "NO",
+          "column_default": "CURRENT_TIMESTAMP",
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "source",
+          "data_type": "character varying",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": 100
+        },
+        {
+          "column_name": "is_active",
+          "data_type": "boolean",
+          "is_nullable": "YES",
+          "column_default": "true",
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "expires_at",
+          "data_type": "timestamp without time zone",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "created_at",
+          "data_type": "timestamp without time zone",
+          "is_nullable": "YES",
+          "column_default": "CURRENT_TIMESTAMP",
+          "character_maximum_length": null
+        }
+      ],
+      "constraints": [
+        {
+          "constraint_name": "entity_effect_ownership_pkey",
+          "constraint_type": "PRIMARY KEY",
+          "column_name": "session_id",
+          "foreign_table_name": "entity_effect_ownership",
+          "foreign_column_name": "effect_id"
+        },
+        {
+          "constraint_name": "entity_effect_ownership_pkey",
+          "constraint_type": "PRIMARY KEY",
+          "column_name": "session_id",
+          "foreign_table_name": "entity_effect_ownership",
+          "foreign_column_name": "runtime_entity_id"
+        },
+        {
+          "constraint_name": "entity_effect_ownership_pkey",
+          "constraint_type": "PRIMARY KEY",
+          "column_name": "session_id",
+          "foreign_table_name": "entity_effect_ownership",
+          "foreign_column_name": "session_id"
+        },
+        {
+          "constraint_name": "entity_effect_ownership_pkey",
+          "constraint_type": "PRIMARY KEY",
+          "column_name": "runtime_entity_id",
+          "foreign_table_name": "entity_effect_ownership",
+          "foreign_column_name": "effect_id"
+        },
+        {
+          "constraint_name": "entity_effect_ownership_pkey",
+          "constraint_type": "PRIMARY KEY",
+          "column_name": "runtime_entity_id",
+          "foreign_table_name": "entity_effect_ownership",
+          "foreign_column_name": "runtime_entity_id"
+        },
+        {
+          "constraint_name": "entity_effect_ownership_pkey",
+          "constraint_type": "PRIMARY KEY",
+          "column_name": "runtime_entity_id",
+          "foreign_table_name": "entity_effect_ownership",
+          "foreign_column_name": "session_id"
+        },
+        {
+          "constraint_name": "entity_effect_ownership_pkey",
+          "constraint_type": "PRIMARY KEY",
+          "column_name": "effect_id",
+          "foreign_table_name": "entity_effect_ownership",
+          "foreign_column_name": "effect_id"
+        },
+        {
+          "constraint_name": "entity_effect_ownership_pkey",
+          "constraint_type": "PRIMARY KEY",
+          "column_name": "effect_id",
+          "foreign_table_name": "entity_effect_ownership",
+          "foreign_column_name": "runtime_entity_id"
+        },
+        {
+          "constraint_name": "entity_effect_ownership_pkey",
+          "constraint_type": "PRIMARY KEY",
+          "column_name": "effect_id",
+          "foreign_table_name": "entity_effect_ownership",
+          "foreign_column_name": "session_id"
+        },
+        {
+          "constraint_name": "entity_effect_ownership_session_id_fkey",
+          "constraint_type": "FOREIGN KEY",
+          "column_name": "session_id",
+          "foreign_table_name": "active_sessions",
+          "foreign_column_name": "session_id"
+        },
+        {
+          "constraint_name": "entity_effect_ownership_runtime_entity_id_fkey",
+          "constraint_type": "FOREIGN KEY",
+          "column_name": "runtime_entity_id",
+          "foreign_table_name": "runtime_entities",
+          "foreign_column_name": "runtime_entity_id"
+        },
+        {
+          "constraint_name": "entity_effect_ownership_effect_id_fkey",
+          "constraint_type": "FOREIGN KEY",
+          "column_name": "effect_id",
+          "foreign_table_name": "effect_carriers",
+          "foreign_column_name": "effect_id"
+        },
+        {
+          "constraint_name": "23041_23683_1_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        },
+        {
+          "constraint_name": "23041_23683_2_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        },
+        {
+          "constraint_name": "23041_23683_3_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        },
+        {
+          "constraint_name": "23041_23683_4_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        }
+      ],
+      "column_count": 8,
+      "constraint_count": 16
+    },
+    "reference_layer.entity_references": {
+      "columns": [
+        {
+          "column_name": "runtime_entity_id",
+          "data_type": "uuid",
+          "is_nullable": "NO",
+          "column_default": "uuid_generate_v4()",
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "game_entity_id",
+          "data_type": "character varying",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": 50
+        },
+        {
+          "column_name": "session_id",
+          "data_type": "uuid",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "entity_type",
+          "data_type": "character varying",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": 50
+        },
+        {
+          "column_name": "is_player",
+          "data_type": "boolean",
+          "is_nullable": "YES",
+          "column_default": "false",
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "created_at",
+          "data_type": "timestamp without time zone",
+          "is_nullable": "YES",
+          "column_default": "CURRENT_TIMESTAMP",
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "updated_at",
+          "data_type": "timestamp without time zone",
+          "is_nullable": "YES",
+          "column_default": "CURRENT_TIMESTAMP",
+          "character_maximum_length": null
+        }
+      ],
+      "constraints": [
+        {
+          "constraint_name": "entity_references_pkey",
+          "constraint_type": "PRIMARY KEY",
+          "column_name": "runtime_entity_id",
+          "foreign_table_name": "entity_references",
+          "foreign_column_name": "runtime_entity_id"
+        },
+        {
+          "constraint_name": "entity_references_game_entity_id_fkey",
+          "constraint_type": "FOREIGN KEY",
+          "column_name": "game_entity_id",
+          "foreign_table_name": "entities",
+          "foreign_column_name": "entity_id"
+        },
+        {
+          "constraint_name": "23041_23254_1_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        },
+        {
+          "constraint_name": "23041_23254_2_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        },
+        {
+          "constraint_name": "23041_23254_3_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        },
+        {
+          "constraint_name": "23041_23254_4_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        }
+      ],
+      "column_count": 7,
+      "constraint_count": 6
+    },
+    "reference_layer.object_references": {
+      "columns": [
+        {
+          "column_name": "runtime_object_id",
+          "data_type": "character varying",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": 50
+        },
+        {
+          "column_name": "game_object_id",
+          "data_type": "character varying",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": 50
+        },
+        {
+          "column_name": "session_id",
+          "data_type": "uuid",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "object_type",
+          "data_type": "character varying",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": 50
+        },
+        {
+          "column_name": "created_at",
+          "data_type": "timestamp without time zone",
+          "is_nullable": "YES",
+          "column_default": "CURRENT_TIMESTAMP",
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "updated_at",
+          "data_type": "timestamp without time zone",
+          "is_nullable": "YES",
+          "column_default": "CURRENT_TIMESTAMP",
+          "character_maximum_length": null
+        }
+      ],
+      "constraints": [
+        {
+          "constraint_name": "object_references_pkey",
+          "constraint_type": "PRIMARY KEY",
+          "column_name": "runtime_object_id",
+          "foreign_table_name": "object_references",
+          "foreign_column_name": "runtime_object_id"
+        },
+        {
+          "constraint_name": "object_references_game_object_id_fkey",
+          "constraint_type": "FOREIGN KEY",
+          "column_name": "game_object_id",
+          "foreign_table_name": "world_objects",
+          "foreign_column_name": "object_id"
+        },
+        {
+          "constraint_name": "23041_23286_1_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        },
+        {
+          "constraint_name": "23041_23286_2_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        },
+        {
+          "constraint_name": "23041_23286_3_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        },
+        {
+          "constraint_name": "23041_23286_4_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        }
+      ],
+      "column_count": 6,
+      "constraint_count": 6
+    },
+    "runtime_data.action_logs": {
+      "columns": [
+        {
+          "column_name": "log_id",
+          "data_type": "uuid",
+          "is_nullable": "NO",
+          "column_default": "uuid_generate_v4()",
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "session_id",
+          "data_type": "uuid",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "player_id",
+          "data_type": "character varying",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": 50
+        },
+        {
+          "column_name": "action",
+          "data_type": "character varying",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": 50
+        },
+        {
+          "column_name": "success",
+          "data_type": "boolean",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "message",
+          "data_type": "text",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "timestamp",
+          "data_type": "timestamp without time zone",
+          "is_nullable": "YES",
+          "column_default": "CURRENT_TIMESTAMP",
+          "character_maximum_length": null
+        }
+      ],
+      "constraints": [
+        {
+          "constraint_name": "action_logs_pkey",
+          "constraint_type": "PRIMARY KEY",
+          "column_name": "log_id",
+          "foreign_table_name": "action_logs",
+          "foreign_column_name": "log_id"
+        },
+        {
+          "constraint_name": "action_logs_session_id_fkey",
+          "constraint_type": "FOREIGN KEY",
+          "column_name": "session_id",
+          "foreign_table_name": "active_sessions",
+          "foreign_column_name": "session_id"
+        },
+        {
+          "constraint_name": "23042_23483_1_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        },
+        {
+          "constraint_name": "23042_23483_2_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        },
+        {
+          "constraint_name": "23042_23483_3_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        },
+        {
+          "constraint_name": "23042_23483_4_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        },
+        {
+          "constraint_name": "23042_23483_5_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        }
+      ],
+      "column_count": 7,
+      "constraint_count": 7
+    },
+    "runtime_data.active_sessions": {
+      "columns": [
+        {
+          "column_name": "session_id",
+          "data_type": "uuid",
+          "is_nullable": "NO",
+          "column_default": "uuid_generate_v4()",
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "session_name",
+          "data_type": "character varying",
+          "is_nullable": "NO",
+          "column_default": "'Unnamed Session'::character varying",
+          "character_maximum_length": 100
+        },
+        {
+          "column_name": "session_state",
+          "data_type": "character varying",
+          "is_nullable": "NO",
+          "column_default": "'active'::character varying",
+          "character_maximum_length": 50
+        },
+        {
+          "column_name": "created_at",
+          "data_type": "timestamp without time zone",
+          "is_nullable": "YES",
+          "column_default": "CURRENT_TIMESTAMP",
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "last_active_at",
+          "data_type": "timestamp without time zone",
+          "is_nullable": "YES",
+          "column_default": "CURRENT_TIMESTAMP",
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "updated_at",
+          "data_type": "timestamp without time zone",
+          "is_nullable": "YES",
+          "column_default": "CURRENT_TIMESTAMP",
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "closed_at",
+          "data_type": "timestamp without time zone",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "metadata",
+          "data_type": "jsonb",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "player_runtime_entity_id",
+          "data_type": "uuid",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "simulation_mode",
+          "data_type": "boolean",
+          "is_nullable": "YES",
+          "column_default": "false",
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "time_acceleration",
+          "data_type": "numeric",
+          "is_nullable": "YES",
+          "column_default": "1.0",
+          "character_maximum_length": null
+        }
+      ],
+      "constraints": [
+        {
+          "constraint_name": "active_sessions_pkey",
+          "constraint_type": "PRIMARY KEY",
+          "column_name": "session_id",
+          "foreign_table_name": "active_sessions",
+          "foreign_column_name": "session_id"
+        },
+        {
+          "constraint_name": "23042_23300_1_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        },
+        {
+          "constraint_name": "23042_23300_2_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        },
+        {
+          "constraint_name": "23042_23300_3_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        }
+      ],
+      "column_count": 11,
+      "constraint_count": 4
+    },
+    "runtime_data.cell_occupants": {
+      "columns": [
+        {
+          "column_name": "cell_id",
+          "data_type": "character varying",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": 255
+        },
+        {
+          "column_name": "entity_id",
+          "data_type": "character varying",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": 255
+        },
+        {
+          "column_name": "entity_type",
+          "data_type": "character varying",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": 50
+        },
+        {
+          "column_name": "position",
+          "data_type": "jsonb",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "entered_at",
+          "data_type": "timestamp without time zone",
+          "is_nullable": "YES",
+          "column_default": "CURRENT_TIMESTAMP",
+          "character_maximum_length": null
+        }
+      ],
+      "constraints": [
+        {
+          "constraint_name": "cell_occupants_pkey",
+          "constraint_type": "PRIMARY KEY",
+          "column_name": "cell_id",
+          "foreign_table_name": "cell_occupants",
+          "foreign_column_name": "cell_id"
+        },
+        {
+          "constraint_name": "cell_occupants_pkey",
+          "constraint_type": "PRIMARY KEY",
+          "column_name": "cell_id",
+          "foreign_table_name": "cell_occupants",
+          "foreign_column_name": "entity_id"
+        },
+        {
+          "constraint_name": "cell_occupants_pkey",
+          "constraint_type": "PRIMARY KEY",
+          "column_name": "entity_id",
+          "foreign_table_name": "cell_occupants",
+          "foreign_column_name": "cell_id"
+        },
+        {
+          "constraint_name": "cell_occupants_pkey",
+          "constraint_type": "PRIMARY KEY",
+          "column_name": "entity_id",
+          "foreign_table_name": "cell_occupants",
+          "foreign_column_name": "entity_id"
+        },
+        {
+          "constraint_name": "23042_23728_1_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        },
+        {
+          "constraint_name": "23042_23728_2_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        },
+        {
+          "constraint_name": "23042_23728_3_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        }
+      ],
+      "column_count": 5,
+      "constraint_count": 7
+    },
+    "runtime_data.dialogue_history": {
+      "columns": [
+        {
+          "column_name": "history_id",
+          "data_type": "uuid",
+          "is_nullable": "NO",
+          "column_default": "uuid_generate_v4()",
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "session_id",
+          "data_type": "uuid",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "runtime_entity_id",
+          "data_type": "uuid",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "context_id",
+          "data_type": "character varying",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": 50
+        },
+        {
+          "column_name": "speaker_type",
+          "data_type": "character varying",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": 50
+        },
+        {
+          "column_name": "message",
+          "data_type": "text",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "relevant_knowledge",
+          "data_type": "jsonb",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "timestamp",
+          "data_type": "timestamp without time zone",
+          "is_nullable": "YES",
+          "column_default": "CURRENT_TIMESTAMP",
+          "character_maximum_length": null
+        }
+      ],
+      "constraints": [
+        {
+          "constraint_name": "dialogue_history_pkey",
+          "constraint_type": "PRIMARY KEY",
+          "column_name": "history_id",
+          "foreign_table_name": "dialogue_history",
+          "foreign_column_name": "history_id"
+        },
+        {
+          "constraint_name": "dialogue_history_runtime_entity_id_fkey",
+          "constraint_type": "FOREIGN KEY",
+          "column_name": "runtime_entity_id",
+          "foreign_table_name": "runtime_entities",
+          "foreign_column_name": "runtime_entity_id"
+        },
+        {
+          "constraint_name": "dialogue_history_context_id_fkey",
+          "constraint_type": "FOREIGN KEY",
+          "column_name": "context_id",
+          "foreign_table_name": "dialogue_contexts",
+          "foreign_column_name": "dialogue_id"
+        },
+        {
+          "constraint_name": "dialogue_history_session_id_fkey",
+          "constraint_type": "FOREIGN KEY",
+          "column_name": "session_id",
+          "foreign_table_name": "active_sessions",
+          "foreign_column_name": "session_id"
+        },
+        {
+          "constraint_name": "23042_23430_1_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        },
+        {
+          "constraint_name": "23042_23430_2_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        },
+        {
+          "constraint_name": "23042_23430_3_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        },
+        {
+          "constraint_name": "23042_23430_4_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        }
+      ],
+      "column_count": 8,
+      "constraint_count": 8
+    },
+    "runtime_data.dialogue_states": {
+      "columns": [
+        {
+          "column_name": "state_id",
+          "data_type": "uuid",
+          "is_nullable": "NO",
+          "column_default": "uuid_generate_v4()",
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "session_id",
+          "data_type": "uuid",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "runtime_entity_id",
+          "data_type": "uuid",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "current_context_id",
+          "data_type": "character varying",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": 50
+        },
+        {
+          "column_name": "conversation_state",
+          "data_type": "jsonb",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "active_topics",
+          "data_type": "jsonb",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "last_updated",
+          "data_type": "timestamp without time zone",
+          "is_nullable": "YES",
+          "column_default": "CURRENT_TIMESTAMP",
+          "character_maximum_length": null
+        }
+      ],
+      "constraints": [
+        {
+          "constraint_name": "dialogue_states_pkey",
+          "constraint_type": "PRIMARY KEY",
+          "column_name": "state_id",
+          "foreign_table_name": "dialogue_states",
+          "foreign_column_name": "state_id"
+        },
+        {
+          "constraint_name": "dialogue_states_runtime_entity_id_fkey",
+          "constraint_type": "FOREIGN KEY",
+          "column_name": "runtime_entity_id",
+          "foreign_table_name": "runtime_entities",
+          "foreign_column_name": "runtime_entity_id"
+        },
+        {
+          "constraint_name": "dialogue_states_current_context_id_fkey",
+          "constraint_type": "FOREIGN KEY",
+          "column_name": "current_context_id",
+          "foreign_table_name": "dialogue_contexts",
+          "foreign_column_name": "dialogue_id"
+        },
+        {
+          "constraint_name": "dialogue_states_session_id_fkey",
+          "constraint_type": "FOREIGN KEY",
+          "column_name": "session_id",
+          "foreign_table_name": "active_sessions",
+          "foreign_column_name": "session_id"
+        },
+        {
+          "constraint_name": "23042_23457_1_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        },
+        {
+          "constraint_name": "23042_23457_2_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        },
+        {
+          "constraint_name": "23042_23457_3_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        }
+      ],
+      "column_count": 7,
+      "constraint_count": 7
+    },
+    "runtime_data.entity_states": {
+      "columns": [
+        {
+          "column_name": "state_id",
+          "data_type": "uuid",
+          "is_nullable": "NO",
+          "column_default": "uuid_generate_v4()",
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "runtime_entity_id",
+          "data_type": "uuid",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "current_stats",
+          "data_type": "jsonb",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "current_position",
+          "data_type": "jsonb",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "active_effects",
+          "data_type": "jsonb",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "inventory",
+          "data_type": "jsonb",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "equipped_items",
+          "data_type": "jsonb",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "created_at",
+          "data_type": "timestamp without time zone",
+          "is_nullable": "YES",
+          "column_default": "CURRENT_TIMESTAMP",
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "updated_at",
+          "data_type": "timestamp without time zone",
+          "is_nullable": "YES",
+          "column_default": "CURRENT_TIMESTAMP",
+          "character_maximum_length": null
+        }
+      ],
+      "constraints": [
+        {
+          "constraint_name": "entity_states_pkey",
+          "constraint_type": "PRIMARY KEY",
+          "column_name": "state_id",
+          "foreign_table_name": "entity_states",
+          "foreign_column_name": "state_id"
+        },
+        {
+          "constraint_name": "entity_states_runtime_entity_id_fkey",
+          "constraint_type": "FOREIGN KEY",
+          "column_name": "runtime_entity_id",
+          "foreign_table_name": "runtime_entities",
+          "foreign_column_name": "runtime_entity_id"
+        },
+        {
+          "constraint_name": "23042_23612_1_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        },
+        {
+          "constraint_name": "23042_23612_2_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        }
+      ],
+      "column_count": 9,
+      "constraint_count": 4
+    },
+    "runtime_data.event_consequences": {
+      "columns": [
+        {
+          "column_name": "consequence_id",
+          "data_type": "uuid",
+          "is_nullable": "NO",
+          "column_default": "uuid_generate_v4()",
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "event_id",
+          "data_type": "uuid",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "consequence_type",
+          "data_type": "character varying",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": 50
+        },
+        {
+          "column_name": "consequence_data",
+          "data_type": "jsonb",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "affected_entities",
+          "data_type": "jsonb",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "affected_objects",
+          "data_type": "jsonb",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "applied_at",
+          "data_type": "timestamp without time zone",
+          "is_nullable": "YES",
+          "column_default": "CURRENT_TIMESTAMP",
+          "character_maximum_length": null
+        }
+      ],
+      "constraints": [
+        {
+          "constraint_name": "event_consequences_pkey",
+          "constraint_type": "PRIMARY KEY",
+          "column_name": "consequence_id",
+          "foreign_table_name": "event_consequences",
+          "foreign_column_name": "consequence_id"
+        },
+        {
+          "constraint_name": "event_consequences_event_id_fkey",
+          "constraint_type": "FOREIGN KEY",
+          "column_name": "event_id",
+          "foreign_table_name": "triggered_events",
+          "foreign_column_name": "event_id"
+        },
+        {
+          "constraint_name": "23042_23544_1_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        },
+        {
+          "constraint_name": "23042_23544_2_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        },
+        {
+          "constraint_name": "23042_23544_3_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        }
+      ],
+      "column_count": 7,
+      "constraint_count": 5
+    },
+    "runtime_data.object_states": {
+      "columns": [
+        {
+          "column_name": "state_id",
+          "data_type": "uuid",
+          "is_nullable": "NO",
+          "column_default": "uuid_generate_v4()",
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "runtime_object_id",
+          "data_type": "uuid",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "current_state",
+          "data_type": "jsonb",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "current_position",
+          "data_type": "jsonb",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "created_at",
+          "data_type": "timestamp without time zone",
+          "is_nullable": "YES",
+          "column_default": "CURRENT_TIMESTAMP",
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "updated_at",
+          "data_type": "timestamp without time zone",
+          "is_nullable": "YES",
+          "column_default": "CURRENT_TIMESTAMP",
+          "character_maximum_length": null
+        }
+      ],
+      "constraints": [
+        {
+          "constraint_name": "object_states_pkey",
+          "constraint_type": "PRIMARY KEY",
+          "column_name": "state_id",
+          "foreign_table_name": "object_states",
+          "foreign_column_name": "state_id"
+        },
+        {
+          "constraint_name": "object_states_runtime_object_id_fkey",
+          "constraint_type": "FOREIGN KEY",
+          "column_name": "runtime_object_id",
+          "foreign_table_name": "runtime_objects",
+          "foreign_column_name": "runtime_object_id"
+        },
+        {
+          "constraint_name": "23042_23628_1_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        },
+        {
+          "constraint_name": "23042_23628_2_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        }
+      ],
+      "column_count": 6,
+      "constraint_count": 4
+    },
+    "runtime_data.player_choices": {
+      "columns": [
+        {
+          "column_name": "choice_id",
+          "data_type": "uuid",
+          "is_nullable": "NO",
+          "column_default": "uuid_generate_v4()",
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "session_id",
+          "data_type": "uuid",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "player_id",
+          "data_type": "character varying",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": 50
+        },
+        {
+          "column_name": "choice_type",
+          "data_type": "character varying",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": 50
+        },
+        {
+          "column_name": "choice_data",
+          "data_type": "jsonb",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "timestamp",
+          "data_type": "timestamp without time zone",
+          "is_nullable": "YES",
+          "column_default": "CURRENT_TIMESTAMP",
+          "character_maximum_length": null
+        }
+      ],
+      "constraints": [
+        {
+          "constraint_name": "player_choices_pkey",
+          "constraint_type": "PRIMARY KEY",
+          "column_name": "choice_id",
+          "foreign_table_name": "player_choices",
+          "foreign_column_name": "choice_id"
+        },
+        {
+          "constraint_name": "player_choices_session_id_fkey",
+          "constraint_type": "FOREIGN KEY",
+          "column_name": "session_id",
+          "foreign_table_name": "active_sessions",
+          "foreign_column_name": "session_id"
+        },
+        {
+          "constraint_name": "23042_23500_1_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        },
+        {
+          "constraint_name": "23042_23500_2_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        },
+        {
+          "constraint_name": "23042_23500_3_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        },
+        {
+          "constraint_name": "23042_23500_4_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        }
+      ],
+      "column_count": 6,
+      "constraint_count": 6
+    },
+    "runtime_data.runtime_cell_entities": {
+      "columns": [
+        {
+          "column_name": "runtime_cell_id",
+          "data_type": "uuid",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "runtime_entity_id",
+          "data_type": "uuid",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "position",
+          "data_type": "jsonb",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "created_at",
+          "data_type": "timestamp without time zone",
+          "is_nullable": "YES",
+          "column_default": "CURRENT_TIMESTAMP",
+          "character_maximum_length": null
+        }
+      ],
+      "constraints": [
+        {
+          "constraint_name": "runtime_cell_entities_pkey",
+          "constraint_type": "PRIMARY KEY",
+          "column_name": "runtime_cell_id",
+          "foreign_table_name": "runtime_cell_entities",
+          "foreign_column_name": "runtime_cell_id"
+        },
+        {
+          "constraint_name": "runtime_cell_entities_pkey",
+          "constraint_type": "PRIMARY KEY",
+          "column_name": "runtime_cell_id",
+          "foreign_table_name": "runtime_cell_entities",
+          "foreign_column_name": "runtime_entity_id"
+        },
+        {
+          "constraint_name": "runtime_cell_entities_pkey",
+          "constraint_type": "PRIMARY KEY",
+          "column_name": "runtime_entity_id",
+          "foreign_table_name": "runtime_cell_entities",
+          "foreign_column_name": "runtime_cell_id"
+        },
+        {
+          "constraint_name": "runtime_cell_entities_pkey",
+          "constraint_type": "PRIMARY KEY",
+          "column_name": "runtime_entity_id",
+          "foreign_table_name": "runtime_cell_entities",
+          "foreign_column_name": "runtime_entity_id"
+        },
+        {
+          "constraint_name": "runtime_cell_entities_runtime_cell_id_fkey",
+          "constraint_type": "FOREIGN KEY",
+          "column_name": "runtime_cell_id",
+          "foreign_table_name": "runtime_cells",
+          "foreign_column_name": "runtime_cell_id"
+        },
+        {
+          "constraint_name": "runtime_cell_entities_runtime_entity_id_fkey",
+          "constraint_type": "FOREIGN KEY",
+          "column_name": "runtime_entity_id",
+          "foreign_table_name": "runtime_entities",
+          "foreign_column_name": "runtime_entity_id"
+        },
+        {
+          "constraint_name": "23042_23375_1_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        },
+        {
+          "constraint_name": "23042_23375_2_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        }
+      ],
+      "column_count": 4,
+      "constraint_count": 8
+    },
+    "runtime_data.runtime_cell_objects": {
+      "columns": [
+        {
+          "column_name": "runtime_cell_id",
+          "data_type": "uuid",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "runtime_object_id",
+          "data_type": "uuid",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "position",
+          "data_type": "jsonb",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "created_at",
+          "data_type": "timestamp without time zone",
+          "is_nullable": "YES",
+          "column_default": "CURRENT_TIMESTAMP",
+          "character_maximum_length": null
+        }
+      ],
+      "constraints": [
+        {
+          "constraint_name": "runtime_cell_objects_pkey",
+          "constraint_type": "PRIMARY KEY",
+          "column_name": "runtime_cell_id",
+          "foreign_table_name": "runtime_cell_objects",
+          "foreign_column_name": "runtime_cell_id"
+        },
+        {
+          "constraint_name": "runtime_cell_objects_pkey",
+          "constraint_type": "PRIMARY KEY",
+          "column_name": "runtime_cell_id",
+          "foreign_table_name": "runtime_cell_objects",
+          "foreign_column_name": "runtime_object_id"
+        },
+        {
+          "constraint_name": "runtime_cell_objects_pkey",
+          "constraint_type": "PRIMARY KEY",
+          "column_name": "runtime_object_id",
+          "foreign_table_name": "runtime_cell_objects",
+          "foreign_column_name": "runtime_cell_id"
+        },
+        {
+          "constraint_name": "runtime_cell_objects_pkey",
+          "constraint_type": "PRIMARY KEY",
+          "column_name": "runtime_object_id",
+          "foreign_table_name": "runtime_cell_objects",
+          "foreign_column_name": "runtime_object_id"
+        },
+        {
+          "constraint_name": "runtime_cell_objects_runtime_cell_id_fkey",
+          "constraint_type": "FOREIGN KEY",
+          "column_name": "runtime_cell_id",
+          "foreign_table_name": "runtime_cells",
+          "foreign_column_name": "runtime_cell_id"
+        },
+        {
+          "constraint_name": "runtime_cell_objects_runtime_object_id_fkey",
+          "constraint_type": "FOREIGN KEY",
+          "column_name": "runtime_object_id",
+          "foreign_table_name": "runtime_objects",
+          "foreign_column_name": "runtime_object_id"
+        },
+        {
+          "constraint_name": "23042_23393_1_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        },
+        {
+          "constraint_name": "23042_23393_2_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        }
+      ],
+      "column_count": 4,
+      "constraint_count": 8
+    },
+    "runtime_data.runtime_cells": {
+      "columns": [
+        {
+          "column_name": "runtime_cell_id",
+          "data_type": "uuid",
+          "is_nullable": "NO",
+          "column_default": "uuid_generate_v4()",
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "game_cell_id",
+          "data_type": "character varying",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": 50
+        },
+        {
+          "column_name": "session_id",
+          "data_type": "uuid",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "created_at",
+          "data_type": "timestamp without time zone",
+          "is_nullable": "YES",
+          "column_default": "CURRENT_TIMESTAMP",
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "updated_at",
+          "data_type": "timestamp without time zone",
+          "is_nullable": "YES",
+          "column_default": "CURRENT_TIMESTAMP",
+          "character_maximum_length": null
+        }
+      ],
+      "constraints": [
+        {
+          "constraint_name": "runtime_cells_pkey",
+          "constraint_type": "PRIMARY KEY",
+          "column_name": "runtime_cell_id",
+          "foreign_table_name": "runtime_cells",
+          "foreign_column_name": "runtime_cell_id"
+        },
+        {
+          "constraint_name": "runtime_cells_game_cell_id_fkey",
+          "constraint_type": "FOREIGN KEY",
+          "column_name": "game_cell_id",
+          "foreign_table_name": "world_cells",
+          "foreign_column_name": "cell_id"
+        },
+        {
+          "constraint_name": "runtime_cells_session_id_fkey",
+          "constraint_type": "FOREIGN KEY",
+          "column_name": "session_id",
+          "foreign_table_name": "active_sessions",
+          "foreign_column_name": "session_id"
+        },
+        {
+          "constraint_name": "23042_23335_1_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        },
+        {
+          "constraint_name": "23042_23335_2_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        },
+        {
+          "constraint_name": "23042_23335_3_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        }
+      ],
+      "column_count": 5,
+      "constraint_count": 6
+    },
+    "runtime_data.runtime_entities": {
+      "columns": [
+        {
+          "column_name": "runtime_entity_id",
+          "data_type": "uuid",
+          "is_nullable": "NO",
+          "column_default": "uuid_generate_v4()",
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "game_entity_id",
+          "data_type": "character varying",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": 50
+        },
+        {
+          "column_name": "session_id",
+          "data_type": "uuid",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "created_at",
+          "data_type": "timestamp without time zone",
+          "is_nullable": "YES",
+          "column_default": "CURRENT_TIMESTAMP",
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "updated_at",
+          "data_type": "timestamp without time zone",
+          "is_nullable": "YES",
+          "column_default": "CURRENT_TIMESTAMP",
+          "character_maximum_length": null
+        }
+      ],
+      "constraints": [
+        {
+          "constraint_name": "runtime_entities_pkey",
+          "constraint_type": "PRIMARY KEY",
+          "column_name": "runtime_entity_id",
+          "foreign_table_name": "runtime_entities",
+          "foreign_column_name": "runtime_entity_id"
+        },
+        {
+          "constraint_name": "runtime_entities_game_entity_id_fkey",
+          "constraint_type": "FOREIGN KEY",
+          "column_name": "game_entity_id",
+          "foreign_table_name": "entities",
+          "foreign_column_name": "entity_id"
+        },
+        {
+          "constraint_name": "runtime_entities_session_id_fkey",
+          "constraint_type": "FOREIGN KEY",
+          "column_name": "session_id",
+          "foreign_table_name": "active_sessions",
+          "foreign_column_name": "session_id"
+        },
+        {
+          "constraint_name": "23042_23315_1_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        },
+        {
+          "constraint_name": "23042_23315_2_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        },
+        {
+          "constraint_name": "23042_23315_3_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        }
+      ],
+      "column_count": 5,
+      "constraint_count": 6
+    },
+    "runtime_data.runtime_events": {
+      "columns": [
+        {
+          "column_name": "event_id",
+          "data_type": "uuid",
+          "is_nullable": "NO",
+          "column_default": "uuid_generate_v4()",
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "runtime_cell_id",
+          "data_type": "uuid",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "event_type",
+          "data_type": "character varying",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": 50
+        },
+        {
+          "column_name": "title",
+          "data_type": "character varying",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": 200
+        },
+        {
+          "column_name": "description",
+          "data_type": "text",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "conditions",
+          "data_type": "jsonb",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "consequences",
+          "data_type": "jsonb",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "is_active",
+          "data_type": "boolean",
+          "is_nullable": "YES",
+          "column_default": "true",
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "created_at",
+          "data_type": "timestamp without time zone",
+          "is_nullable": "YES",
+          "column_default": "CURRENT_TIMESTAMP",
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "updated_at",
+          "data_type": "timestamp without time zone",
+          "is_nullable": "YES",
+          "column_default": "CURRENT_TIMESTAMP",
+          "character_maximum_length": null
+        }
+      ],
+      "constraints": [
+        {
+          "constraint_name": "runtime_events_pkey",
+          "constraint_type": "PRIMARY KEY",
+          "column_name": "event_id",
+          "foreign_table_name": "runtime_events",
+          "foreign_column_name": "event_id"
+        },
+        {
+          "constraint_name": "runtime_events_runtime_cell_id_fkey",
+          "constraint_type": "FOREIGN KEY",
+          "column_name": "runtime_cell_id",
+          "foreign_table_name": "runtime_cells",
+          "foreign_column_name": "runtime_cell_id"
+        },
+        {
+          "constraint_name": "23042_23411_1_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        },
+        {
+          "constraint_name": "23042_23411_2_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        },
+        {
+          "constraint_name": "23042_23411_3_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        },
+        {
+          "constraint_name": "23042_23411_4_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        }
+      ],
+      "column_count": 10,
+      "constraint_count": 6
+    },
+    "runtime_data.runtime_objects": {
+      "columns": [
+        {
+          "column_name": "runtime_object_id",
+          "data_type": "uuid",
+          "is_nullable": "NO",
+          "column_default": "uuid_generate_v4()",
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "game_object_id",
+          "data_type": "character varying",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": 50
+        },
+        {
+          "column_name": "session_id",
+          "data_type": "uuid",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "created_at",
+          "data_type": "timestamp without time zone",
+          "is_nullable": "YES",
+          "column_default": "CURRENT_TIMESTAMP",
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "updated_at",
+          "data_type": "timestamp without time zone",
+          "is_nullable": "YES",
+          "column_default": "CURRENT_TIMESTAMP",
+          "character_maximum_length": null
+        }
+      ],
+      "constraints": [
+        {
+          "constraint_name": "runtime_objects_pkey",
+          "constraint_type": "PRIMARY KEY",
+          "column_name": "runtime_object_id",
+          "foreign_table_name": "runtime_objects",
+          "foreign_column_name": "runtime_object_id"
+        },
+        {
+          "constraint_name": "runtime_objects_game_object_id_fkey",
+          "constraint_type": "FOREIGN KEY",
+          "column_name": "game_object_id",
+          "foreign_table_name": "world_objects",
+          "foreign_column_name": "object_id"
+        },
+        {
+          "constraint_name": "runtime_objects_session_id_fkey",
+          "constraint_type": "FOREIGN KEY",
+          "column_name": "session_id",
+          "foreign_table_name": "active_sessions",
+          "foreign_column_name": "session_id"
+        },
+        {
+          "constraint_name": "23042_23355_1_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        },
+        {
+          "constraint_name": "23042_23355_2_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        },
+        {
+          "constraint_name": "23042_23355_3_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        }
+      ],
+      "column_count": 5,
+      "constraint_count": 6
+    },
+    "runtime_data.session_states": {
+      "columns": [
+        {
+          "column_name": "session_id",
+          "data_type": "uuid",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "current_day",
+          "data_type": "integer",
+          "is_nullable": "YES",
+          "column_default": "1",
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "current_hour",
+          "data_type": "integer",
+          "is_nullable": "YES",
+          "column_default": "6",
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "current_minute",
+          "data_type": "integer",
+          "is_nullable": "YES",
+          "column_default": "0",
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "last_tick",
+          "data_type": "timestamp without time zone",
+          "is_nullable": "YES",
+          "column_default": "CURRENT_TIMESTAMP",
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "created_at",
+          "data_type": "timestamp without time zone",
+          "is_nullable": "YES",
+          "column_default": "CURRENT_TIMESTAMP",
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "updated_at",
+          "data_type": "timestamp without time zone",
+          "is_nullable": "YES",
+          "column_default": "CURRENT_TIMESTAMP",
+          "character_maximum_length": null
+        }
+      ],
+      "constraints": [
+        {
+          "constraint_name": "session_states_pkey",
+          "constraint_type": "PRIMARY KEY",
+          "column_name": "session_id",
+          "foreign_table_name": "session_states",
+          "foreign_column_name": "session_id"
+        },
+        {
+          "constraint_name": "session_states_session_id_fkey",
+          "constraint_type": "FOREIGN KEY",
+          "column_name": "session_id",
+          "foreign_table_name": "active_sessions",
+          "foreign_column_name": "session_id"
+        },
+        {
+          "constraint_name": "23042_23595_1_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        }
+      ],
+      "column_count": 7,
+      "constraint_count": 3
+    },
+    "runtime_data.triggered_events": {
+      "columns": [
+        {
+          "column_name": "event_id",
+          "data_type": "uuid",
+          "is_nullable": "NO",
+          "column_default": "uuid_generate_v4()",
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "session_id",
+          "data_type": "uuid",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "event_type",
+          "data_type": "character varying",
+          "is_nullable": "NO",
+          "column_default": null,
+          "character_maximum_length": 50
+        },
+        {
+          "column_name": "event_data",
+          "data_type": "jsonb",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "source_entity_ref",
+          "data_type": "uuid",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "target_entity_ref",
+          "data_type": "uuid",
+          "is_nullable": "YES",
+          "column_default": null,
+          "character_maximum_length": null
+        },
+        {
+          "column_name": "triggered_at",
+          "data_type": "timestamp without time zone",
+          "is_nullable": "YES",
+          "column_default": "CURRENT_TIMESTAMP",
+          "character_maximum_length": null
+        }
+      ],
+      "constraints": [
+        {
+          "constraint_name": "triggered_events_pkey",
+          "constraint_type": "PRIMARY KEY",
+          "column_name": "event_id",
+          "foreign_table_name": "triggered_events",
+          "foreign_column_name": "event_id"
+        },
+        {
+          "constraint_name": "triggered_events_session_id_fkey",
+          "constraint_type": "FOREIGN KEY",
+          "column_name": "session_id",
+          "foreign_table_name": "active_sessions",
+          "foreign_column_name": "session_id"
+        },
+        {
+          "constraint_name": "triggered_events_source_entity_ref_fkey",
+          "constraint_type": "FOREIGN KEY",
+          "column_name": "source_entity_ref",
+          "foreign_table_name": "entity_references",
+          "foreign_column_name": "runtime_entity_id"
+        },
+        {
+          "constraint_name": "triggered_events_target_entity_ref_fkey",
+          "constraint_type": "FOREIGN KEY",
+          "column_name": "target_entity_ref",
+          "foreign_table_name": "entity_references",
+          "foreign_column_name": "runtime_entity_id"
+        },
+        {
+          "constraint_name": "23042_23517_1_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        },
+        {
+          "constraint_name": "23042_23517_2_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        },
+        {
+          "constraint_name": "23042_23517_3_not_null",
+          "constraint_type": "CHECK",
+          "column_name": null,
+          "foreign_table_name": null,
+          "foreign_column_name": null
+        }
+      ],
+      "column_count": 7,
+      "constraint_count": 7
+    }
+  }
+}

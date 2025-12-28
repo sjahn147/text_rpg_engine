@@ -1,0 +1,68 @@
+version: 1
+language: ko
+categories:
+  - BLOCK
+  - REQUEST_CHANGES
+  - TEST_REQUIRED
+  - HUMAN_CONFIRM
+  - APPROVE
+examples:
+  - id: block_global_state
+    category: BLOCK
+    input: |
+      current_player = None
+      def start_game():
+          global current_player
+          current_player = create_player()
+    expected: |
+      [차단됨] 전역 상태(global state) 사용이 감지되었습니다.
+      사유: 테스트 격리/동시성 안전성 위반. 불변성/DI 원칙 위배.
+      조치: GameState/Context로 상태 이동. 함수 외부 상태 수정 금지.
+  - id: test_first_required
+    category: TEST_REQUIRED
+    input: |
+      힐링 시스템 구현해주세요. 체력 50 회복.
+    expected: |
+      [테스트 필요]
+      구현 전 실패 테스트가 필요합니다.
+      1) 체력 +50, 2) 최대 체력 초과 금지, 3) 사망 시 동작 정의.
+  - id: human_confirm_schema_change
+    category: HUMAN_CONFIRM
+    input: |
+      users 테이블에 gold 컬럼 추가해주세요
+    expected: |
+      [사용자 확인 필요]
+      작업: ALTER TABLE (스키마 변경)
+      필요 단계: 1) 백업 경로, 2) 환경 확인, 3) 최종 승인. 확인 후 진행.
+  - id: request_changes_attack_fn
+    category: REQUEST_CHANGES
+    input: |
+      def attack(player, enemy):
+          enemy.hp -= player.attack
+          return "ok"
+    expected: |
+      [수정 요청]
+      문제: 타입 부재, 에러 처리 없음, 문자열 반환, 테스트 부재.
+      조치: ActionResult 반환, 경계 케이스 테스트 추가, 타입 명시.
+  - id: request_changes_mutation
+    category: REQUEST_CHANGES
+    input: |
+      def add_item_to_inventory(player, item):
+          player.inventory.append(item)
+    expected: |
+      [불변성 위반]
+      in-place 변경 감지. 새로운 목록 생성 후 Player.with_inventory(...)로 반환.
+  - id: approve_immutable_heal
+    category: APPROVE
+    input: |
+      @dataclass(frozen=True)
+      class Player:
+          id: str
+          health: int
+          max_health: int
+      def heal_player(player: Player, amount: int) -> Player:
+          new_health = min(player.max_health, player.health + amount)
+          return Player(id=player.id, health=new_health, max_health=player.max_health)
+    expected: |
+      [승인]
+      불변 모델과 순수 함수 확인. 후속 제안: 오버힐/사망 상태 테스트 추가.

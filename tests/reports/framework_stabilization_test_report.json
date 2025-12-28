@@ -1,0 +1,290 @@
+{
+  "test_summary": {
+    "total_tests": 6,
+    "successful_tests": 5,
+    "failed_tests": 1,
+    "success_rate": 83.33333333333334
+  },
+  "test_results": [
+    {
+      "test": "framework_initialization",
+      "success": true,
+      "result": {
+        "module_count": 7,
+        "module_status": {
+          "DatabaseConnection": "initialized",
+          "ErrorHandler": "initialized",
+          "TimeSystem": "initialized",
+          "EntityManager": "initialized",
+          "CellManager": "initialized",
+          "DialogueManager": "initialized",
+          "ActionHandler": "initialized"
+        }
+      }
+    },
+    {
+      "test": "module_dependencies",
+      "success": true,
+      "result": {
+        "available_modules": [
+          "DatabaseConnection",
+          "ErrorHandler",
+          "TimeSystem",
+          "EntityManager",
+          "CellManager",
+          "DialogueManager",
+          "ActionHandler"
+        ],
+        "total_modules": 7
+      }
+    },
+    {
+      "test": "performance_optimization",
+      "success": true,
+      "result": {
+        "total_modules": 7,
+        "initialized_modules": 7,
+        "running_modules": 0,
+        "error_modules": 0,
+        "module_details": {
+          "DatabaseConnection": {
+            "status": "initialized",
+            "dependencies": [],
+            "performance_metrics": {},
+            "last_updated": "2025-10-19T14:17:17.709443"
+          },
+          "ErrorHandler": {
+            "status": "initialized",
+            "dependencies": [
+              "DatabaseConnection"
+            ],
+            "performance_metrics": {},
+            "last_updated": "2025-10-19T14:17:17.845355"
+          },
+          "TimeSystem": {
+            "status": "initialized",
+            "dependencies": [
+              "DatabaseConnection",
+              "ErrorHandler"
+            ],
+            "performance_metrics": {},
+            "last_updated": "2025-10-19T14:17:17.948914"
+          },
+          "EntityManager": {
+            "status": "initialized",
+            "dependencies": [
+              "DatabaseConnection",
+              "ErrorHandler"
+            ],
+            "performance_metrics": {},
+            "last_updated": "2025-10-19T14:17:17.966911"
+          },
+          "CellManager": {
+            "status": "initialized",
+            "dependencies": [
+              "DatabaseConnection",
+              "ErrorHandler",
+              "EntityManager"
+            ],
+            "performance_metrics": {},
+            "last_updated": "2025-10-19T14:17:17.973913"
+          },
+          "DialogueManager": {
+            "status": "initialized",
+            "dependencies": [
+              "DatabaseConnection",
+              "ErrorHandler",
+              "EntityManager"
+            ],
+            "performance_metrics": {},
+            "last_updated": "2025-10-19T14:17:17.981912"
+          },
+          "ActionHandler": {
+            "status": "initialized",
+            "dependencies": [
+              "DatabaseConnection",
+              "ErrorHandler",
+              "EntityManager",
+              "CellManager"
+            ],
+            "performance_metrics": {},
+            "last_updated": "2025-10-19T14:17:17.983912"
+          }
+        }
+      }
+    },
+    {
+      "test": "health_check",
+      "success": true,
+      "result": {
+        "overall_status": "healthy",
+        "timestamp": "2025-10-19T14:17:18.003912",
+        "modules": {
+          "DatabaseConnection": {
+            "status": "unknown",
+            "message": "health_check method not implemented"
+          },
+          "ErrorHandler": {
+            "status": "unknown",
+            "message": "health_check method not implemented"
+          },
+          "TimeSystem": {
+            "status": "unknown",
+            "message": "health_check method not implemented"
+          },
+          "EntityManager": {
+            "status": "unknown",
+            "message": "health_check method not implemented"
+          },
+          "CellManager": {
+            "status": "unknown",
+            "message": "health_check method not implemented"
+          },
+          "DialogueManager": {
+            "status": "unknown",
+            "message": "health_check method not implemented"
+          },
+          "ActionHandler": {
+            "status": "unknown",
+            "message": "health_check method not implemented"
+          }
+        },
+        "issues": []
+      }
+    },
+    {
+      "test": "module_integration",
+      "success": true,
+      "result": {
+        "entity_manager_available": true,
+        "cell_manager_available": true,
+        "integration_successful": true
+      }
+    },
+    {
+      "test": "framework_cleanup",
+      "success": false,
+      "result": {
+        "modules_before": 7,
+        "modules_after": 7
+      }
+    }
+  ],
+  "framework_status": {
+    "module_status": {
+      "DatabaseConnection": "stopped",
+      "ErrorHandler": "stopped",
+      "TimeSystem": "stopped",
+      "EntityManager": "stopped",
+      "CellManager": "stopped",
+      "DialogueManager": "stopped",
+      "ActionHandler": "stopped"
+    },
+    "performance_metrics": {
+      "total_modules": 7,
+      "initialized_modules": 0,
+      "running_modules": 0,
+      "error_modules": 0,
+      "module_details": {
+        "DatabaseConnection": {
+          "status": "stopped",
+          "dependencies": [],
+          "performance_metrics": {},
+          "last_updated": "2025-10-19T14:17:18.009913"
+        },
+        "ErrorHandler": {
+          "status": "stopped",
+          "dependencies": [
+            "DatabaseConnection"
+          ],
+          "performance_metrics": {},
+          "last_updated": "2025-10-19T14:17:18.007914"
+        },
+        "TimeSystem": {
+          "status": "stopped",
+          "dependencies": [
+            "DatabaseConnection",
+            "ErrorHandler"
+          ],
+          "performance_metrics": {},
+          "last_updated": "2025-10-19T14:17:18.007914"
+        },
+        "EntityManager": {
+          "status": "stopped",
+          "dependencies": [
+            "DatabaseConnection",
+            "ErrorHandler"
+          ],
+          "performance_metrics": {},
+          "last_updated": "2025-10-19T14:17:18.004913"
+        },
+        "CellManager": {
+          "status": "stopped",
+          "dependencies": [
+            "DatabaseConnection",
+            "ErrorHandler",
+            "EntityManager"
+          ],
+          "performance_metrics": {},
+          "last_updated": "2025-10-19T14:17:18.004913"
+        },
+        "DialogueManager": {
+          "status": "stopped",
+          "dependencies": [
+            "DatabaseConnection",
+            "ErrorHandler",
+            "EntityManager"
+          ],
+          "performance_metrics": {},
+          "last_updated": "2025-10-19T14:17:18.004913"
+        },
+        "ActionHandler": {
+          "status": "stopped",
+          "dependencies": [
+            "DatabaseConnection",
+            "ErrorHandler",
+            "EntityManager",
+            "CellManager"
+          ],
+          "performance_metrics": {},
+          "last_updated": "2025-10-19T14:17:18.004913"
+        }
+      }
+    },
+    "health_check": {
+      "overall_status": "healthy",
+      "timestamp": "2025-10-19T14:17:18.009913",
+      "modules": {
+        "DatabaseConnection": {
+          "status": "unknown",
+          "message": "health_check method not implemented"
+        },
+        "ErrorHandler": {
+          "status": "unknown",
+          "message": "health_check method not implemented"
+        },
+        "TimeSystem": {
+          "status": "unknown",
+          "message": "health_check method not implemented"
+        },
+        "EntityManager": {
+          "status": "unknown",
+          "message": "health_check method not implemented"
+        },
+        "CellManager": {
+          "status": "unknown",
+          "message": "health_check method not implemented"
+        },
+        "DialogueManager": {
+          "status": "unknown",
+          "message": "health_check method not implemented"
+        },
+        "ActionHandler": {
+          "status": "unknown",
+          "message": "health_check method not implemented"
+        }
+      },
+      "issues": []
+    }
+  }
+}

@@ -1,0 +1,120 @@
+{
+  "test_summary": {
+    "total_tests": 6,
+    "successful_tests": 6,
+    "failed_tests": 0,
+    "success_rate": 100.0
+  },
+  "test_results": [
+    {
+      "test": "database_connection_error",
+      "success": true,
+      "result": {
+        "error_id": "CONNECTION_ERROR",
+        "message": "데이터베이스 연결 실패",
+        "severity": "high",
+        "category": "database",
+        "recovery_attempted": true,
+        "recovery_result": null,
+        "timestamp": "2025-10-19T14:01:34.253661"
+      }
+    },
+    {
+      "test": "validation_error",
+      "success": true,
+      "result": {
+        "error_id": "VALIDATION_ERROR",
+        "message": "엔티티 ID 형식이 올바르지 않습니다",
+        "severity": "medium",
+        "category": "validation",
+        "recovery_attempted": true,
+        "recovery_result": null,
+        "timestamp": "2025-10-19T14:01:34.253661"
+      }
+    },
+    {
+      "test": "entity_not_found",
+      "success": true,
+      "result": {
+        "error_id": "ENTITY_NOT_FOUND",
+        "message": "엔티티를 찾을 수 없습니다: nonexistent_entity (타입: NPC)",
+        "severity": "medium",
+        "category": "business_logic",
+        "recovery_attempted": true,
+        "recovery_result": null,
+        "timestamp": "2025-10-19T14:01:34.253661"
+      }
+    },
+    {
+      "test": "cell_not_found",
+      "success": true,
+      "result": {
+        "error_id": "CELL_NOT_FOUND",
+        "message": "셀을 찾을 수 없습니다: nonexistent_cell",
+        "severity": "medium",
+        "category": "business_logic",
+        "recovery_attempted": true,
+        "recovery_result": null,
+        "timestamp": "2025-10-19T14:01:34.254662"
+      }
+    },
+    {
+      "test": "recovery_mechanism",
+      "success": {
+        "success": true,
+        "message": "복구 성공",
+        "result": {
+          "status": "recovered",
+          "action": "reconnect"
+        },
+        "retry_count": 0
+      },
+      "result": {
+        "error_id": "CONNECTION_ERROR",
+        "message": "데이터베이스 연결 실패",
+        "severity": "high",
+        "category": "database",
+        "recovery_attempted": true,
+        "recovery_result": {
+          "success": true,
+          "message": "복구 성공",
+          "result": {
+            "status": "recovered",
+            "action": "reconnect"
+          },
+          "retry_count": 0
+        },
+        "timestamp": "2025-10-19T14:01:34.254662"
+      }
+    },
+    {
+      "test": "error_statistics",
+      "success": true,
+      "result": {
+        "total_errors": 5,
+        "recent_errors_count": 5
+      }
+    }
+  ],
+  "error_statistics": {
+    "total_errors": 5,
+    "category_stats": {
+      "database": 2,
+      "validation": 1,
+      "business": 2
+    },
+    "severity_stats": {
+      "critical": 0,
+      "high": 2,
+      "medium": 3,
+      "low": 0
+    },
+    "error_counts": {
+      "database_CONNECTION_ERROR": 2,
+      "validation_VALIDATION_ERROR": 1,
+      "business_logic_ENTITY_NOT_FOUND": 1,
+      "business_logic_CELL_NOT_FOUND": 1
+    },
+    "recovery_actions": 1
+  }
+}

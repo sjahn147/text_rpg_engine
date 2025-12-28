@@ -1,0 +1,117 @@
+{
+    "name": "기본 상호작용 시나리오",
+    "version": "1.0",
+    "description": "플레이어와 NPC 간의 기본적인 상호작용을 테스트하는 시나리오",
+    "author": "RPG Engine",
+    "steps": [
+        {
+            "type": "setup_data",
+            "description": "테스트 데이터 설정",
+            "world_structure": {
+                "regions": [
+                    {
+                        "region_id": "TEST_REGION_001",
+                        "region_name": "테스트 지역",
+                        "description": "테스트용 지역"
+                    }
+                ],
+                "locations": [
+                    {
+                        "location_id": "TEST_LOCATION_001",
+                        "region_id": "TEST_REGION_001",
+                        "location_name": "테스트 마을",
+                        "description": "테스트용 마을"
+                    }
+                ],
+                "cells": [
+                    {
+                        "cell_id": "TEST_CELL_001",
+                        "location_id": "TEST_LOCATION_001",
+                        "cell_name": "마을 광장",
+                        "cell_description": "마을의 중심 광장",
+                        "cell_properties": {
+                            "position": {"x": 0, "y": 0, "z": 0},
+                            "size": {"width": 100, "height": 100, "depth": 10}
+                        }
+                    }
+                ]
+            },
+            "entity_templates": [
+                {
+                    "type": "player",
+                    "template_id": "TEST_PLAYER_001",
+                    "name": "테스트 플레이어",
+                    "entity_description": "테스트용 플레이어 캐릭터",
+                    "base_stats": {
+                        "health": 100,
+                        "mana": 50,
+                        "strength": 10,
+                        "intelligence": 8
+                    }
+                },
+                {
+                    "type": "npc",
+                    "template_id": "TEST_NPC_001",
+                    "name": "상점 주인",
+                    "entity_description": "무기 상점의 주인",
+                    "template_type": "merchant",
+                    "base_stats": {
+                        "health": 80,
+                        "mana": 30,
+                        "strength": 12,
+                        "intelligence": 10
+                    }
+                }
+            ]
+        },
+        {
+            "type": "create_session",
+            "description": "게임 세션 생성",
+            "player_template_id": "TEST_PLAYER_001",
+            "start_cell_id": "TEST_CELL_001"
+        },
+        {
+            "type": "create_entity",
+            "description": "NPC 생성",
+            "game_entity_id": "TEST_NPC_001",
+            "entity_type": "npc",
+            "position": {"x": 30, "y": 0, "z": 30}
+        },
+        {
+            "type": "move_entity",
+            "description": "플레이어를 NPC 근처로 이동",
+            "entity_id": "player",
+            "target_position": {"x": 25, "y": 0, "z": 25}
+        },
+        {
+            "type": "start_dialogue",
+            "description": "NPC와 대화 시작",
+            "npc_id": "TEST_NPC_001"
+        },
+        {
+            "type": "interact",
+            "description": "NPC와 상호작용",
+            "target_id": "TEST_NPC_001",
+            "interaction_type": "dialogue",
+            "player_input": "안녕하세요! 무기가 있나요?"
+        },
+        {
+            "type": "update_stats",
+            "description": "플레이어 스탯 업데이트",
+            "entity_id": "player",
+            "new_stats": {
+                "health": 95,
+                "mana": 45
+            }
+        },
+        {
+            "type": "complete_event",
+            "description": "상호작용 완료",
+            "event_id": "basic_interaction_complete"
+        },
+        {
+            "type": "cleanup",
+            "description": "세션 정리"
+        }
+    ]
+} 

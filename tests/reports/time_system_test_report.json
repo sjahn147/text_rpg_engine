@@ -1,0 +1,130 @@
+{
+  "test_summary": {
+    "total_tests": 7,
+    "successful_tests": 5,
+    "failed_tests": 2,
+    "success_rate": 71.42857142857143
+  },
+  "test_results": [
+    {
+      "test": "basic_time_operations",
+      "success": true,
+      "result": {
+        "time_str": "Day 1, 10:30:00",
+        "time_dict": {
+          "day": 1,
+          "hour": 10,
+          "minute": 30,
+          "second": 0
+        },
+        "restored_time": {
+          "day": 1,
+          "hour": 10,
+          "minute": 30,
+          "second": 0
+        }
+      }
+    },
+    {
+      "test": "time_system_initialization",
+      "success": true,
+      "result": {
+        "current_time": {
+          "day": 1,
+          "hour": 6,
+          "minute": 0,
+          "second": 0
+        },
+        "stats": {
+          "current_time": {
+            "day": 1,
+            "hour": 6,
+            "minute": 0,
+            "second": 0
+          },
+          "time_scale": "real_time",
+          "is_running": false,
+          "scheduled_events_count": 0,
+          "tick_handlers_count": 0,
+          "tick_interval": 1.0
+        }
+      }
+    },
+    {
+      "test": "time_scaling",
+      "success": true,
+      "result": {
+        "tested_scales": [
+          "real_time",
+          "fast",
+          "very_fast"
+        ]
+      }
+    },
+    {
+      "test": "event_scheduling",
+      "success": true,
+      "result": {
+        "event_id": "90a6bb10-d334-45ed-a318-dde565ae2d32",
+        "scheduled_events_count": 1,
+        "event_name": "테스트 이벤트"
+      }
+    },
+    {
+      "test": "time_advancement",
+      "success": false,
+      "result": {
+        "initial_time": {
+          "day": 1,
+          "hour": 11,
+          "minute": 0,
+          "second": 0
+        },
+        "current_time": {
+          "day": 1,
+          "hour": 11,
+          "minute": 0,
+          "second": 0
+        },
+        "expected_hour": 10,
+        "expected_minute": 30
+      }
+    },
+    {
+      "test": "tick_handlers",
+      "success": false,
+      "error": "TimeSystem 시작 실패: invalid input for query argument $1: 'test_session' (invalid UUID 'test_session': length must be between 32..36 characters, got 12)"
+    },
+    {
+      "test": "time_statistics",
+      "success": true,
+      "result": {
+        "current_time": {
+          "day": 1,
+          "hour": 11,
+          "minute": 0,
+          "second": 0
+        },
+        "time_scale": "very_fast",
+        "is_running": false,
+        "scheduled_events_count": 1,
+        "tick_handlers_count": 1,
+        "tick_interval": 1.0
+      }
+    }
+  ],
+  "event_log": [],
+  "time_statistics": {
+    "current_time": {
+      "day": 1,
+      "hour": 11,
+      "minute": 0,
+      "second": 0
+    },
+    "time_scale": "very_fast",
+    "is_running": false,
+    "scheduled_events_count": 1,
+    "tick_handlers_count": 1,
+    "tick_interval": 1.0
+  }
+}
