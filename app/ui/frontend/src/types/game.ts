@@ -29,11 +29,13 @@ export interface CellInfo {
 
 // 엔티티 정보
 export interface EntityInfo {
-  entity_id: string;
+  entity_id?: string; // game_entity_id (선택적)
+  runtime_entity_id?: string; // runtime_entity_id (우선 사용)
   entity_name: string;
   entity_type: 'player' | 'npc' | 'creature';
   description?: string;
-  position: { x: number; y: number; z: number };
+  position?: { x: number; y: number; z: number };
+  current_position?: { x: number; y: number; z: number; runtime_cell_id?: string }; // API 응답 형식
   can_interact: boolean;
   dialogue_id?: string;
 }

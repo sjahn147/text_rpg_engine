@@ -168,16 +168,49 @@ class GameManager:
         """초기 NPC들을 생성합니다."""
         # NPC 생성은 선택적 (실패해도 게임 시작은 계속)
         try:
-            # 상점 NPC 생성
-            await self._spawn_merchant_npc(session_id, cell_runtime_id)
+            # 현재 셀의 game_cell_id 찾기
+            pool = await self.db.pool
+            async with pool.acquire() as conn:
+                cell_ref = await conn.fetchrow(
+                    """
+                    SELECT game_cell_id FROM reference_layer.cell_references
+                    WHERE runtime_cell_id = $1 AND session_id = $2
+                    """,
+                    cell_runtime_id, session_id
+                )
+                
+                if cell_ref:
+                    game_cell_id = cell_ref['game_cell_id']
+                    
+                    # 해당 셀에 배치된 NPC 템플릿 찾기
+                    npc_templates = await conn.fetch(
+                        """
+                        SELECT entity_id, entity_properties
+                        FROM game_data.entities
+                        WHERE entity_type = 'npc'
+                        AND entity_properties->>'default_cell_id' = $1
+                        """,
+                        game_cell_id
+                    )
+                    
+                    # 각 NPC 인스턴스 생성
+                    for npc_template in npc_templates:
+                        try:
+                            entity_props = json.loads(npc_template['entity_properties']) if isinstance(npc_template['entity_properties'], str) else npc_template['entity_properties']
+                            default_pos = entity_props.get('default_position', {'x': 0, 'y': 0, 'z': 0})
+                            if isinstance(default_pos, str):
+                                default_pos = json.loads(default_pos)
+                            
+                            await self.instance_factory.create_npc_instance(
+                                game_entity_id=npc_template['entity_id'],
+                                session_id=session_id,
+                                runtime_cell_id=cell_runtime_id,
+                                position=default_pos
+                            )
+                        except Exception as e:
+                            print(f"NPC {npc_template['entity_id']} 생성 실패 (무시): {e}")
         except Exception as e:
-            print(f"상점 NPC 생성 실패 (무시): {e}")
-        
-        try:
-            # 퀘스트 NPC 생성
-            await self._spawn_quest_npc(session_id, cell_runtime_id)
-        except Exception as e:
-            print(f"퀘스트 NPC 생성 실패 (무시): {e}")
+            print(f"초기 NPC 생성 실패 (무시): {e}")
     
     async def _spawn_merchant_npc(self, session_id: str, cell_runtime_id: str):
         """상점 NPC를 생성합니다."""

@@ -221,23 +221,39 @@ export const GameView: React.FC<GameViewProps> = ({ onNavigate }) => {
           break;
           
         case 'observe':
-          // 주변 관찰하기 - 모든 오브젝트 발견
-          if (currentCell && currentCell.objects) {
-            // 모든 오브젝트 발견 처리 (object_id 또는 runtime_object_id 사용)
-            const allObjectIds = currentCell.objects.map(obj => 
-              obj.object_id || (obj as any).runtime_object_id || (obj as any).game_object_id
-            ).filter(id => id);
-            setDiscoveredObjects(new Set([...discoveredObjects, ...allObjectIds]));
+          // 주변 관찰하기 - 모든 오브젝트와 NPC 발견
+          if (currentCell) {
+            const discoveredIds: string[] = [];
+            
+            // 모든 오브젝트 발견 처리
+            if (currentCell.objects) {
+              const allObjectIds = currentCell.objects.map(obj => 
+                obj.object_id || (obj as any).runtime_object_id || (obj as any).game_object_id
+              ).filter(id => id);
+              discoveredIds.push(...allObjectIds);
+            }
+            
+            // 모든 NPC 발견 처리 (플레이어 제외)
+            if (currentCell.entities) {
+              const allEntityIds = currentCell.entities
+                .filter(entity => entity.entity_type !== 'player')
+                .map(entity => 
+                  entity.runtime_entity_id || entity.entity_id || ''
+                )
+                .filter(id => id);
+              discoveredIds.push(...allEntityIds);
+            }
+            
+            setDiscoveredObjects(new Set([...discoveredObjects, ...discoveredIds]));
             
             // 메시지 표시
-            const objectNames = currentCell.objects.map(obj => obj.object_name).join(', ');
             setCurrentMessage({
-              text: action.description || `주변을 관찰하니 ${objectNames} 등이 보입니다.`,
+              text: action.description || '주변을 자세히 관찰합니다.',
               message_type: 'narration',
               timestamp: Date.now(),
             });
             
-            // 새로운 액션 조회 (개별 오브젝트 액션 포함)
+            // 새로운 액션 조회 (개별 오브젝트 및 NPC 액션 포함)
             const actions = await gameApi.getAvailableActions(gameState.session_id);
             setAvailableActions(actions);
           }

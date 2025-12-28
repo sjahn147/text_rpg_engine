@@ -79,13 +79,23 @@ class InteractionService(BaseGameplayService):
                               str(entity_ref['runtime_entity_id']) == str(player_id))
                     
                     if is_self:
-                        description = "거울을 보는 것처럼 자신의 모습을 관찰합니다. "
-                        if game_entity['entity_description']:
-                            description += game_entity['entity_description']
+                        # 플레이어 본인 조사 시 examine_text 우선 사용
+                        examine_text = entity_properties.get('examine_text') if entity_properties else None
+                        if examine_text:
+                            description = examine_text
                         else:
-                            description += f"{game_entity['entity_name']}의 모습이 보입니다."
+                            description = "거울을 보는 것처럼 자신의 모습을 관찰합니다. "
+                            if game_entity['entity_description']:
+                                description += game_entity['entity_description']
+                            else:
+                                description += f"{game_entity['entity_name']}의 모습이 보입니다."
                     else:
-                        description = game_entity['entity_description'] or f"{game_entity['entity_name']}을(를) 관찰합니다."
+                        # NPC 조사 시도 examine_text 우선 사용
+                        examine_text = entity_properties.get('examine_text') if entity_properties else None
+                        if examine_text:
+                            description = examine_text
+                        else:
+                            description = game_entity['entity_description'] or f"{game_entity['entity_name']}을(를) 관찰합니다."
                     
                     details = []
                     details.append(f"타입: {game_entity['entity_type']}")

@@ -96,16 +96,20 @@ class GameSession:
         pool = await self.db.pool
         async with pool.acquire() as conn:
             try:
+                # current_position JSONB에 runtime_cell_id 포함
+                position_data = {
+                    **new_position,
+                    'runtime_cell_id': target_cell_id
+                }
+                
                 await conn.execute(
                     """
                     UPDATE runtime_data.entity_states
-                    SET runtime_cell_id = $1,
-                        current_position = $2,
+                    SET current_position = $1,
                         updated_at = CURRENT_TIMESTAMP
-                    WHERE runtime_entity_id = $3
+                    WHERE runtime_entity_id = $2
                     """,
-                    target_cell_id,
-                    json.dumps(new_position),
+                    json.dumps(position_data),
                     player_id
                 )
                 

@@ -20,7 +20,14 @@ export const useEntityInteraction = () => {
   ) => {
     if (!gameState) return;
 
-    const entityId = entity.entity_id || '';
+    // entity_id 또는 runtime_entity_id 사용 (우선순위: runtime_entity_id > entity_id)
+    const entityId = entity.runtime_entity_id || entity.entity_id || '';
+    
+    if (!entityId) {
+      setError('엔티티 ID를 찾을 수 없습니다.');
+      console.error('엔티티 ID 없음:', entity);
+      return;
+    }
 
     try {
       setLoading(true);
@@ -79,4 +86,5 @@ export const useEntityInteraction = () => {
     handleEntityAction,
   };
 };
+
 

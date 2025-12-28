@@ -90,10 +90,10 @@ class CellService(BaseGameplayService):
             
             cell_info = {
                 "cell_id": current_cell_id,
-                "cell_name": cell_data['cell_name'],
+                "cell_name": cell_data['cell_name'] or "알 수 없는 장소",
                 "description": cell_data['description'] or "",
-                "location_name": cell_data['location_name'],
-                "region_name": cell_data['region_name'],
+                "location_name": cell_data['location_name'] or "알 수 없는 위치",
+                "region_name": cell_data['region_name'] or "알 수 없는 지역",
                 "entities": cell_contents.get('entities', []),
                 "objects": objects,
                 "connected_cells": connected_cells,
@@ -132,12 +132,18 @@ class CellService(BaseGameplayService):
             player_id = player_entities[0]['runtime_entity_id']
             
             # ReferenceLayerRepository를 통한 ID 변환
-            # 먼저 runtime_cell_id로 조회 시도
-            cell_ref = await self.reference_layer_repo.get_cell_reference(target_cell_id)
+            # target_cell_id는 game_cell_id 또는 runtime_cell_id일 수 있음
+            # 먼저 game_cell_id로 조회 시도 (session_id 포함)
+            cell_ref = await self.reference_layer_repo.get_cell_reference_by_game_id(target_cell_id, session_id)
             
-            # runtime_cell_id가 아니면 game_cell_id로 조회
-            if not cell_ref or cell_ref.get('session_id') != session_id:
-                cell_ref = await self.reference_layer_repo.get_cell_reference_by_game_id(target_cell_id, session_id)
+            # game_cell_id로 조회 실패 시 runtime_cell_id로 조회 시도
+            if not cell_ref:
+                cell_ref = await self.reference_layer_repo.get_cell_reference(target_cell_id)
+                # runtime_cell_id로 조회된 경우 session_id 확인 (타입 변환 고려)
+                if cell_ref:
+                    ref_session_id = str(cell_ref.get('session_id', ''))
+                    if ref_session_id != str(session_id):
+                        cell_ref = None
             
             # 여전히 없으면 game_cell_id로 간주하고 생성
             if not cell_ref:
@@ -149,7 +155,16 @@ class CellService(BaseGameplayService):
                 # ReferenceLayerRepository를 통한 생성
                 cell_ref = await self.reference_layer_repo.get_or_create_cell_reference(target_cell_id, session_id)
             
+            # cell_ref에서 runtime_cell_id 추출
+            if not cell_ref:
+                raise ValueError(f"셀 참조를 찾을 수 없습니다: target_cell_id={target_cell_id}, session_id={session_id}")
+            
+            if 'runtime_cell_id' not in cell_ref:
+                self.logger.error(f"셀 참조에 runtime_cell_id가 없습니다: {cell_ref}")
+                raise ValueError(f"셀 참조 정보가 올바르지 않습니다: runtime_cell_id 키가 없습니다")
+            
             runtime_target_cell_id = cell_ref['runtime_cell_id']
+            self.logger.info(f"플레이어 이동: session_id={session_id}, target_cell_id={target_cell_id}, runtime_cell_id={runtime_target_cell_id}")
             
             # 이동 처리 (GameSession의 move_player 사용)
             success = await session.move_player(

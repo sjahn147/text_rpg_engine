@@ -46,15 +46,18 @@ class ReferenceLayerRepository:
         """셀 참조를 생성합니다."""
         pool = await self.db.pool
         async with pool.acquire() as conn:
+            # cell_type이 제공되지 않으면 기본값 사용
+            cell_type = reference_data.get('cell_type', 'indoor')
             await conn.execute(
                 """
                 INSERT INTO reference_layer.cell_references
-                (runtime_cell_id, game_cell_id, session_id)
-                VALUES ($1, $2, $3)
+                (runtime_cell_id, game_cell_id, session_id, cell_type)
+                VALUES ($1, $2, $3, $4)
                 """,
                 reference_data['runtime_cell_id'],
                 reference_data['game_cell_id'],
-                reference_data['session_id']
+                reference_data['session_id'],
+                cell_type
             )
             return reference_data['runtime_cell_id']
 
@@ -183,13 +186,32 @@ class ReferenceLayerRepository:
         if existing:
             return existing
         
-        # 없으면 생성
+        # 없으면 생성 (cell_type은 게임 데이터에서 가져오거나 기본값 사용)
         import uuid
+        from database.repositories.game_data import GameDataRepository
+        
+        # 게임 데이터에서 cell_type 조회
+        game_data_repo = GameDataRepository(self.db)
+        game_cell = await game_data_repo.get_world_cell(game_cell_id)
+        cell_type = 'indoor'  # 기본값
+        if game_cell:
+            # cell_properties에서 cell_type 추출 시도
+            cell_properties = game_cell.get('cell_properties')
+            if cell_properties:
+                if isinstance(cell_properties, str):
+                    import json
+                    cell_properties = json.loads(cell_properties)
+                cell_type = cell_properties.get('cell_type', 'indoor')
+            # 또는 템플릿에 cell_type이 직접 있는 경우
+            elif 'cell_type' in game_cell:
+                cell_type = game_cell['cell_type']
+        
         runtime_cell_id = str(uuid.uuid4())
         await self.create_cell_reference({
             'runtime_cell_id': runtime_cell_id,
             'game_cell_id': game_cell_id,
-            'session_id': session_id
+            'session_id': session_id,
+            'cell_type': cell_type
         })
         
         # 생성된 참조 반환

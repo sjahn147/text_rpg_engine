@@ -146,9 +146,27 @@ class ActionService(BaseGameplayService):
             
             # 일반적인 액션 추가 (TRPG 스타일)
             objects = cell_contents.get('objects', [])
+            entities = cell_contents.get('entities', [])
+            
+            # 관찰하기 액션은 항상 표시 (오브젝트나 NPC가 없어도 주변을 관찰할 수 있음)
+            discovered_items = []
+            
+            # 오브젝트 이름 수집
             if len(objects) > 0:
-                # 관찰하기 - 모든 오브젝트 발견
                 object_names = [obj.get('object_name', 'Object') for obj in objects]
+                discovered_items.extend(object_names)
+            
+            # NPC 이름 수집 (플레이어 제외)
+            if len(entities) > 0:
+                npc_names = [
+                    entity.get('entity_name', 'Entity') 
+                    for entity in entities 
+                    if entity.get('entity_type') != 'player'
+                ]
+                discovered_items.extend(npc_names)
+            
+            # 발견된 항목이 있으면 상세 설명, 없으면 일반 설명
+            if len(discovered_items) > 0:
                 actions.append({
                     "action_id": "observe_room",
                     "action_type": "observe",
@@ -156,7 +174,18 @@ class ActionService(BaseGameplayService):
                     "target_id": None,
                     "target_name": None,
                     "target_type": None,
-                    "description": f"주변을 관찰하여 {', '.join(object_names)} 등을 발견합니다.",
+                    "description": f"주변을 관찰하여 {', '.join(discovered_items)} 등이 보입니다.",
+                })
+            else:
+                # 오브젝트나 NPC가 없어도 관찰 액션 제공
+                actions.append({
+                    "action_id": "observe_room",
+                    "action_type": "observe",
+                    "text": "주변 관찰하기",
+                    "target_id": None,
+                    "target_name": None,
+                    "target_type": None,
+                    "description": "주변을 자세히 관찰합니다.",
                 })
             
             # 발견된 오브젝트별 구체적인 액션 추가
