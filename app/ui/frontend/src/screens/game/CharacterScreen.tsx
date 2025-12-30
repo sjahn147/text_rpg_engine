@@ -251,3 +251,4 @@ export const CharacterScreen: React.FC<CharacterScreenProps> = ({ onClose }) => 
   );
 };
 
+

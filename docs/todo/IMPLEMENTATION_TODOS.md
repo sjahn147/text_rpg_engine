@@ -239,3 +239,4 @@
 - `docs/architecture/OBJECT_INTERACTION_COMPLETE_GUIDE.md`: 오브젝트 상호작용 완전 가이드
 - `docs/architecture/ACTION_HANDLER_MODULARIZATION_PROPOSAL.md`: ActionHandler 모듈화 제안
 
+

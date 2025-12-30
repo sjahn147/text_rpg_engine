@@ -25,7 +25,10 @@ async def get_locations():
 @router.get("/region/{region_id}", response_model=List[LocationResponse])
 async def get_locations_by_region(region_id: str):
     """특정 지역의 모든 위치 조회"""
-    return await location_service.get_locations_by_region(region_id)
+    try:
+        return await location_service.get_locations_by_region(region_id)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get locations by region: {str(e)}")
 
 
 @router.get("/{location_id}", response_model=LocationResponse)

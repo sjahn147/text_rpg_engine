@@ -26,7 +26,10 @@ async def get_cells():
 @router.get("/location/{location_id}", response_model=List[CellResponse])
 async def get_cells_by_location(location_id: str):
     """특정 위치의 모든 셀 조회"""
-    return await cell_service.get_cells_by_location(location_id)
+    try:
+        return await cell_service.get_cells_by_location(location_id)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get cells by location: {str(e)}")
 
 
 @router.get("/{cell_id}", response_model=CellResponse)

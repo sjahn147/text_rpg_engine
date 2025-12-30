@@ -153,3 +153,4 @@ feat: Phase 1 - 게임 화면 구조 리팩토링
 BREAKING CHANGE: GameView는 이제 MainGameScreen에서 사용됨
 ```
 
+

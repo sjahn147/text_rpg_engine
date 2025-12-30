@@ -282,3 +282,4 @@ export const JournalScreen: React.FC<JournalScreenProps> = ({ onClose }) => {
   );
 };
 
+

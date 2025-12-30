@@ -14,6 +14,55 @@ class EntityService:
     def __init__(self, db_connection: Optional[DatabaseConnection] = None):
         self.db = db_connection or DatabaseConnection()
     
+    async def get_all_entities(self) -> List[EntityResponse]:
+        """모든 엔티티 조회"""
+        try:
+            pool = await self.db.pool
+            async with pool.acquire() as conn:
+                rows = await conn.fetch("""
+                    SELECT 
+                        entity_id, entity_type, entity_name, entity_description,
+                        entity_status, base_stats, default_equipment, default_abilities,
+                        default_inventory, entity_properties, 
+                        default_position_3d, entity_size,
+                        dialogue_context_id,
+                        created_at, updated_at
+                    FROM game_data.entities
+                    ORDER BY entity_name
+                """)
+                
+                entities = []
+                for row in rows:
+                    base_stats = parse_jsonb_data(row['base_stats'])
+                    default_equipment = parse_jsonb_data(row['default_equipment'])
+                    default_abilities = parse_jsonb_data(row['default_abilities'])
+                    default_inventory = parse_jsonb_data(row['default_inventory'])
+                    entity_properties = parse_jsonb_data(row['entity_properties'])
+                    default_position_3d = parse_jsonb_data(row.get('default_position_3d'))
+                    
+                    entities.append(EntityResponse(
+                        entity_id=row['entity_id'],
+                        entity_type=row['entity_type'],
+                        entity_name=row['entity_name'],
+                        entity_description=row['entity_description'],
+                        entity_status=row.get('entity_status', 'active'),
+                        base_stats=base_stats or {},
+                        default_equipment=default_equipment or {},
+                        default_abilities=default_abilities or {},
+                        default_inventory=default_inventory or {},
+                        entity_properties=entity_properties or {},
+                        default_position_3d=default_position_3d,
+                        entity_size=row.get('entity_size'),
+                        dialogue_context_id=row.get('dialogue_context_id'),
+                        created_at=row['created_at'],
+                        updated_at=row['updated_at']
+                    ))
+                
+                return entities
+        except Exception as e:
+            logger.error(f"모든 엔티티 조회 실패: {e}")
+            raise
+    
     async def get_entities_by_cell(self, cell_id: str) -> List[EntityResponse]:
         """특정 셀의 모든 엔티티 조회"""
         try:

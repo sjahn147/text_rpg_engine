@@ -13,6 +13,15 @@ router = APIRouter()
 entity_service = EntityService()
 
 
+@router.get("/", response_model=List[EntityResponse])
+async def get_entities():
+    """모든 엔티티 조회"""
+    try:
+        return await entity_service.get_all_entities()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get entities: {str(e)}")
+
+
 @router.get("/cell/{cell_id}", response_model=List[EntityResponse])
 async def get_entities_by_cell(cell_id: str):
     """특정 셀의 모든 엔티티 조회"""

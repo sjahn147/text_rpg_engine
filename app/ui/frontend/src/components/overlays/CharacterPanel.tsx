@@ -238,3 +238,4 @@ export const CharacterPanel: React.FC<CharacterPanelProps> = ({
   );
 };
 
+
