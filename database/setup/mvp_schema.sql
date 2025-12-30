@@ -514,6 +514,7 @@ CREATE TABLE reference_layer.entity_references (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (game_entity_id) REFERENCES game_data.entities(entity_id) ON DELETE RESTRICT
+    -- session/runtime FKs added in idempotent block below
 );
 
 CREATE INDEX idx_entity_references_session ON reference_layer.entity_references(session_id);
@@ -528,13 +529,14 @@ COMMENT ON COLUMN reference_layer.entity_references.is_player IS '플레이어 �
 
 -- Cell References
 CREATE TABLE reference_layer.cell_references (
-    runtime_cell_id VARCHAR(50) PRIMARY KEY,
+    runtime_cell_id UUID PRIMARY KEY,
     game_cell_id VARCHAR(50) NOT NULL,
     session_id UUID NOT NULL,
     cell_type VARCHAR(50) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (game_cell_id) REFERENCES game_data.world_cells(cell_id) ON DELETE RESTRICT
+    -- session/runtime FKs added in idempotent block below
 );
 
 CREATE INDEX idx_cell_references_session ON reference_layer.cell_references(session_id);
@@ -544,13 +546,14 @@ COMMENT ON TABLE reference_layer.cell_references IS '게임 데이터 셀과 런
 
 -- Object References
 CREATE TABLE reference_layer.object_references (
-    runtime_object_id VARCHAR(50) PRIMARY KEY,
+    runtime_object_id UUID PRIMARY KEY,
     game_object_id VARCHAR(50) NOT NULL,
     session_id UUID NOT NULL,
     object_type VARCHAR(50) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (game_object_id) REFERENCES game_data.world_objects(object_id) ON DELETE RESTRICT
+    -- session/runtime FKs added in idempotent block below
 );
 
 CREATE INDEX idx_object_references_session ON reference_layer.object_references(session_id);
@@ -606,6 +609,8 @@ CREATE TABLE runtime_data.runtime_cells (
     runtime_cell_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     game_cell_id VARCHAR(50) NOT NULL,
     session_id UUID NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'active',
+    cell_type VARCHAR(50) NOT NULL DEFAULT 'indoor',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (game_cell_id) REFERENCES game_data.world_cells(cell_id) ON DELETE CASCADE,
@@ -652,28 +657,30 @@ COMMENT ON TABLE runtime_data.runtime_cell_entities IS '셀-엔티티 관계 (�
 
 -- Cell Occupants (셀 내 엔티티 위치 정보)
 CREATE TABLE runtime_data.cell_occupants (
-    cell_id VARCHAR(255) NOT NULL,
-    entity_id VARCHAR(255) NOT NULL,
+    runtime_cell_id UUID NOT NULL,
+    runtime_entity_id UUID NOT NULL,
     entity_type VARCHAR(50) NOT NULL,
     position JSONB,
     entered_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (cell_id, entity_id),
-    FOREIGN KEY (cell_id) REFERENCES runtime_data.runtime_cells(cell_id) ON DELETE CASCADE,
-    FOREIGN KEY (entity_id) REFERENCES runtime_data.runtime_entities(entity_id) ON DELETE CASCADE
+    PRIMARY KEY (runtime_cell_id, runtime_entity_id),
+    FOREIGN KEY (runtime_cell_id) REFERENCES runtime_data.runtime_cells(runtime_cell_id) ON DELETE CASCADE,
+    FOREIGN KEY (runtime_entity_id) REFERENCES runtime_data.runtime_entities(runtime_entity_id) ON DELETE CASCADE
 );
 
 -- 인덱스 생성
-CREATE INDEX idx_cell_occupants_cell_id ON runtime_data.cell_occupants(cell_id);
-CREATE INDEX idx_cell_occupants_entity_id ON runtime_data.cell_occupants(entity_id);
+CREATE INDEX idx_cell_occupants_cell_id ON runtime_data.cell_occupants(runtime_cell_id);
+CREATE INDEX idx_cell_occupants_entity_id ON runtime_data.cell_occupants(runtime_entity_id);
 CREATE INDEX idx_cell_occupants_entered_at ON runtime_data.cell_occupants(entered_at);
 
 -- 코멘트 추가
 COMMENT ON TABLE runtime_data.cell_occupants IS '셀 내 엔티티 위치 정보';
-COMMENT ON COLUMN runtime_data.cell_occupants.cell_id IS '셀 ID';
-COMMENT ON COLUMN runtime_data.cell_occupants.entity_id IS '엔티티 ID';
+COMMENT ON COLUMN runtime_data.cell_occupants.runtime_cell_id IS '런타임 셀 ID';
+COMMENT ON COLUMN runtime_data.cell_occupants.runtime_entity_id IS '런타임 엔티티 ID';
 COMMENT ON COLUMN runtime_data.cell_occupants.entity_type IS '엔티티 타입';
 COMMENT ON COLUMN runtime_data.cell_occupants.position IS '셀 내 위치 (JSONB)';
 COMMENT ON COLUMN runtime_data.cell_occupants.entered_at IS '진입 시간';
+-- SSOT: 위치의 기록/갱신은 runtime_data.entity_states.current_position이 단일 진실원;
+-- cell_occupants는 조회 편의를 위한 파생 테이블로 서비스 로직만이 갱신하도록 제한한다.
 
 -- Cell-Object Relationships
 CREATE TABLE runtime_data.runtime_cell_objects (
@@ -687,6 +694,110 @@ CREATE TABLE runtime_data.runtime_cell_objects (
 );
 
 COMMENT ON TABLE runtime_data.runtime_cell_objects IS '셀-오브젝트 관계 (위치 정보 포함)';
+
+-- FK backfills (idempotent, after runtime_data tables exist)
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'fk_entity_references_session'
+    ) THEN
+        ALTER TABLE reference_layer.entity_references
+        ADD CONSTRAINT fk_entity_references_session
+        FOREIGN KEY (session_id) REFERENCES runtime_data.active_sessions(session_id) ON DELETE CASCADE;
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'fk_entity_references_runtime'
+    ) THEN
+        ALTER TABLE reference_layer.entity_references
+        ADD CONSTRAINT fk_entity_references_runtime
+        FOREIGN KEY (runtime_entity_id) REFERENCES runtime_data.runtime_entities(runtime_entity_id) ON DELETE CASCADE;
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'fk_cell_references_session'
+    ) THEN
+        ALTER TABLE reference_layer.cell_references
+        ADD CONSTRAINT fk_cell_references_session
+        FOREIGN KEY (session_id) REFERENCES runtime_data.active_sessions(session_id) ON DELETE CASCADE;
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'fk_cell_references_runtime'
+    ) THEN
+        ALTER TABLE reference_layer.cell_references
+        ADD CONSTRAINT fk_cell_references_runtime
+        FOREIGN KEY (runtime_cell_id) REFERENCES runtime_data.runtime_cells(runtime_cell_id) ON DELETE CASCADE;
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'fk_object_references_session'
+    ) THEN
+        ALTER TABLE reference_layer.object_references
+        ADD CONSTRAINT fk_object_references_session
+        FOREIGN KEY (session_id) REFERENCES runtime_data.active_sessions(session_id) ON DELETE CASCADE;
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'fk_object_references_runtime'
+    ) THEN
+        ALTER TABLE reference_layer.object_references
+        ADD CONSTRAINT fk_object_references_runtime
+        FOREIGN KEY (runtime_object_id) REFERENCES runtime_data.runtime_objects(runtime_object_id) ON DELETE CASCADE;
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'fk_active_sessions_player'
+    ) THEN
+        ALTER TABLE runtime_data.active_sessions
+        ADD CONSTRAINT fk_active_sessions_player
+        FOREIGN KEY (player_runtime_entity_id) REFERENCES runtime_data.runtime_entities(runtime_entity_id) ON DELETE SET NULL;
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'uq_entity_references_session_entity'
+    ) THEN
+        ALTER TABLE reference_layer.entity_references
+        ADD CONSTRAINT uq_entity_references_session_entity UNIQUE (session_id, game_entity_id);
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'uq_cell_references_session_cell'
+    ) THEN
+        ALTER TABLE reference_layer.cell_references
+        ADD CONSTRAINT uq_cell_references_session_cell UNIQUE (session_id, game_cell_id);
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace 
+        WHERE c.relname = 'idx_entity_states_session_entity' AND n.nspname = 'runtime_data'
+    ) THEN
+        CREATE INDEX idx_entity_states_session_entity 
+        ON runtime_data.entity_states(session_id, runtime_entity_id);
+    END IF;
+END $$;
+
+-- Validation helpers (run manually as needed before/after migration)
+-- 1) Detect bad runtime_cell_id strings before generated column cast:
+-- SELECT state_id, current_position FROM runtime_data.entity_states
+-- WHERE NOT (
+--     jsonb_typeof(current_position -> 'runtime_cell_id') = 'string'
+--     AND (current_position->>'runtime_cell_id') ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+-- ) AND current_position IS NOT NULL;
+--
+-- 2) Cell occupants CASCADE sanity (should delete occupant when runtime_cell is removed):
+-- WITH _c AS (
+--   INSERT INTO runtime_data.runtime_cells (runtime_cell_id, game_cell_id, session_id) VALUES (uuid_generate_v4(), 'CELL_VILLAGE_CENTER_001', uuid_generate_v4()) RETURNING runtime_cell_id
+-- ), _e AS (
+--   INSERT INTO runtime_data.runtime_entities (runtime_entity_id, game_entity_id, session_id) SELECT uuid_generate_v4(), 'NPC_VILLAGER_001', uuid_generate_v4() RETURNING runtime_entity_id
+-- )
+-- INSERT INTO runtime_data.cell_occupants SELECT _c.runtime_cell_id, _e.runtime_entity_id, 'npc', '{}'::jsonb, now() FROM _c,_e;
+-- SELECT COUNT(*) FROM runtime_data.cell_occupants WHERE runtime_cell_id IN (SELECT runtime_cell_id FROM _c);
+-- DELETE FROM runtime_data.runtime_cells WHERE runtime_cell_id IN (SELECT runtime_cell_id FROM _c);
+-- SELECT COUNT(*) FROM runtime_data.cell_occupants WHERE runtime_cell_id IN (SELECT runtime_cell_id FROM _c);
+--
+-- 3) Session delete cascading reference_layer rows:
+-- DELETE FROM runtime_data.active_sessions WHERE session_id = '<test-session-uuid>';
 
 -- Runtime Events
 CREATE TABLE runtime_data.runtime_events (
@@ -906,6 +1017,7 @@ COMMENT ON TABLE runtime_data.session_states IS '세션별 상태 관리 (게임
 CREATE TABLE runtime_data.entity_states (
     state_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     runtime_entity_id UUID NOT NULL,
+    session_id UUID,
     current_stats JSONB,
     current_position JSONB,
     active_effects JSONB,
@@ -913,7 +1025,17 @@ CREATE TABLE runtime_data.entity_states (
     equipped_items JSONB,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (runtime_entity_id) REFERENCES runtime_data.runtime_entities(runtime_entity_id) ON DELETE CASCADE
+    current_cell_id UUID GENERATED ALWAYS AS (
+        CASE 
+            WHEN jsonb_typeof(current_position -> 'runtime_cell_id') = 'string'
+                 AND (current_position->>'runtime_cell_id') ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+            THEN (current_position->>'runtime_cell_id')::uuid
+            ELSE NULL
+        END
+    ) STORED,
+    FOREIGN KEY (runtime_entity_id) REFERENCES runtime_data.runtime_entities(runtime_entity_id) ON DELETE CASCADE,
+    FOREIGN KEY (session_id) REFERENCES runtime_data.active_sessions(session_id) ON DELETE CASCADE,
+    FOREIGN KEY (current_cell_id) REFERENCES runtime_data.runtime_cells(runtime_cell_id) ON DELETE SET NULL
 );
 
 CREATE INDEX idx_entity_states_entity ON runtime_data.entity_states(runtime_entity_id);

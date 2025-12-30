@@ -244,10 +244,11 @@ class EntityManager:
             # entity_states 테이블에 초기 상태 저장 (MVP 스키마 준수)
             await self.db.execute_query("""
                 INSERT INTO runtime_data.entity_states 
-                (runtime_entity_id, current_stats, current_position, active_effects, inventory, equipped_items, created_at, updated_at)
-                VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+                (runtime_entity_id, session_id, current_stats, current_position, active_effects, inventory, equipped_items, created_at, updated_at)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
             """, 
             runtime_entity_id,
+            session_id,
             serialize_jsonb_data(base_stats or {}),
             serialize_jsonb_data(custom_position or {"x": 0.0, "y": 0.0}),
             serialize_jsonb_data([]),  # active_effects
