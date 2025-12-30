@@ -34,11 +34,11 @@ class RuntimeDataRepository:
             await conn.execute(
                 """
                 INSERT INTO runtime_data.entity_states
-                (runtime_entity_id, runtime_cell_id, current_stats, current_position, active_effects, inventory, equipped_items)
+                (runtime_entity_id, session_id, current_stats, current_position, active_effects, inventory, equipped_items)
                 VALUES ($1, $2, $3, $4, $5, $6, $7)
                 """,
                 entity_state_data['runtime_entity_id'],
-                entity_state_data['runtime_cell_id'],
+                entity_state_data.get('session_id'),
                 entity_state_data['current_stats'],
                 entity_state_data['current_position'],
                 entity_state_data.get('active_effects', []),

@@ -1,7 +1,8 @@
 """
 셀 관리 모듈
 """
-from typing import Dict, List, Optional, Any, Tuple
+from typing import Dict, List, Optional, Any, Tuple, Union
+from uuid import UUID
 import uuid
 import asyncio
 import json
@@ -121,7 +122,7 @@ class CellManager:
     
     async def create_cell(self, 
                          static_cell_id: str,
-                         session_id: str) -> CellResult:
+                         session_id: Union[str, UUID]) -> CellResult:
         """
         정적 셀 템플릿에서 런타임 셀 인스턴스 생성
         
@@ -164,12 +165,14 @@ class CellManager:
             # 런타임 셀 인스턴스를 runtime_data.runtime_cells에 매핑만 저장
             await self.db.execute_query("""
                 INSERT INTO runtime_data.runtime_cells (
-                    runtime_cell_id, game_cell_id, session_id, created_at
-                ) VALUES ($1, $2, $3, NOW())
+                    runtime_cell_id, game_cell_id, session_id, status, cell_type, created_at
+                ) VALUES ($1, $2, $3, $4, $5, NOW())
             """, 
             runtime_cell_id,
             static_cell_id,
-            session_id
+            session_id,
+            "active",
+            "indoor"
             )
             
             # reference_layer에 매핑 저장
@@ -208,7 +211,7 @@ class CellManager:
                 str(e)
             )
     
-    async def get_cell(self, cell_id: str) -> CellResult:
+    async def get_cell(self, cell_id: Union[str, UUID]) -> CellResult:
         """
         셀 조회
         
@@ -243,7 +246,7 @@ class CellManager:
                 str(e)
             )
     
-    async def get_cell_contents(self, cell_id: str) -> Dict[str, Any]:
+    async def get_cell_contents(self, cell_id: Union[str, UUID]) -> Dict[str, Any]:
         """
         셀의 컨텐츠를 조회합니다 (간단한 버전)
         
@@ -274,7 +277,7 @@ class CellManager:
             self.logger.error(f"Failed to get cell contents: {str(e)}")
             return {'entities': [], 'objects': [], 'events': []}
     
-    async def load_cell_content(self, cell_id: str) -> CellResult:
+    async def load_cell_content(self, cell_id: Union[str, UUID]) -> CellResult:
         """
         셀 컨텐츠 로딩
         
@@ -319,7 +322,7 @@ class CellManager:
                 str(e)
             )
     
-    async def enter_cell(self, cell_id: str, player_id: str) -> CellResult:
+    async def enter_cell(self, cell_id: Union[str, UUID], player_id: Union[str, UUID]) -> CellResult:
         """
         셀 진입
         
@@ -348,8 +351,10 @@ class CellManager:
             content_result = await self.load_cell_content(cell_id)
             if not content_result.success:
                 return content_result
-            
-            # 플레이어를 셀에 추가
+
+            # 플레이어 위치 SSOT = entity_states.current_position
+            await self.add_entity_to_cell(player_id, cell_id)
+            # 셀 점유 테이블은 조회 편의를 위한 파생 데이터로 유지
             await self._add_player_to_cell(cell_id, player_id)
             
             return CellResult.success_result(
@@ -364,7 +369,7 @@ class CellManager:
                 str(e)
             )
     
-    async def leave_cell(self, cell_id: str, player_id: str) -> CellResult:
+    async def leave_cell(self, cell_id: Union[str, UUID], player_id: Union[str, UUID]) -> CellResult:
         """
         셀 떠나기
         
@@ -381,7 +386,9 @@ class CellManager:
             if not cell_result.success:
                 return cell_result
             
-            # 플레이어를 셀에서 제거
+            # 플레이어 위치 SSOT = entity_states.current_position
+            await self.remove_entity_from_cell(player_id, cell_id)
+            # 셀 점유 파생 데이터 정리
             await self._remove_player_from_cell(cell_id, player_id)
             
             return CellResult.success_result(
@@ -480,7 +487,7 @@ class CellManager:
             print(f"셀 목록 조회 실패: {str(e)}")
             return []
     
-    async def delete_cell(self, cell_id: str) -> CellResult:
+    async def delete_cell(self, cell_id: Union[str, UUID]) -> CellResult:
         """셀 삭제"""
         try:
             # 캐시에서 셀 조회
@@ -506,7 +513,7 @@ class CellManager:
             self.logger.error(f"Failed to delete cell '{cell_id}': {str(e)}")
             return CellResult.error_result(f"Failed to delete cell: {str(e)}")
     
-    async def _delete_cell_from_db(self, cell_id: str) -> None:
+    async def _delete_cell_from_db(self, cell_id: Union[str, UUID]) -> None:
         """데이터베이스에서 셀 삭제"""
         try:
             pool = await self.db.pool
@@ -530,7 +537,7 @@ class CellManager:
             raise
     
     
-    async def _load_cell_from_db(self, cell_id: str) -> Optional[CellData]:
+    async def _load_cell_from_db(self, cell_id: Union[str, UUID]) -> Optional[CellData]:
         """데이터베이스에서 셀 로드"""
         try:
             pool = await self.db.pool
@@ -842,7 +849,7 @@ class CellManager:
             self.logger.error(f"Failed to load cells from database: {str(e)}")
             return []
     
-    async def _get_cell_status_and_type(self, cell_id: str) -> Tuple[CellStatus, CellType]:
+    async def _get_cell_status_and_type(self, cell_id: Union[str, UUID]) -> Tuple[CellStatus, CellType]:
         """DB에서 셀의 상태와 타입 조회"""
         try:
             pool = await self.db.pool
@@ -870,7 +877,7 @@ class CellManager:
             # 오류 시 기본값 반환
             return CellStatus.ACTIVE, CellType.INDOOR
     
-    async def _add_player_to_cell(self, cell_id: str, player_id: str) -> None:
+    async def _add_player_to_cell(self, runtime_cell_id: Union[str, UUID], runtime_entity_id: Union[str, UUID]) -> None:
         """플레이어를 셀에 추가"""
         try:
             pool = await self.db.pool
@@ -878,27 +885,27 @@ class CellManager:
                 # 플레이어를 셀에 추가하는 로직
                 await conn.execute("""
                     INSERT INTO runtime_data.cell_occupants 
-                    (cell_id, entity_id, entity_type, position, entered_at)
+                    (runtime_cell_id, runtime_entity_id, entity_type, position, entered_at)
                     VALUES ($1, $2, $3, $4, $5)
-                    ON CONFLICT (cell_id, entity_id) 
+                    ON CONFLICT (runtime_cell_id, runtime_entity_id) 
                     DO UPDATE SET 
                         position = EXCLUDED.position,
                         entered_at = EXCLUDED.entered_at
                 """, 
-                cell_id, 
-                player_id, 
+                runtime_cell_id, 
+                runtime_entity_id, 
                 "player", 
                 json.dumps({"x": 0, "y": 0, "z": 0}), 
                 datetime.now()
                 )
                 
-                self.logger.info(f"Player {player_id} added to cell {cell_id}")
+                self.logger.info(f"Player {runtime_entity_id} added to cell {runtime_cell_id}")
                 
         except Exception as e:
             self.logger.error(f"Failed to add player to cell: {str(e)}")
             raise
     
-    async def _remove_player_from_cell(self, cell_id: str, player_id: str) -> None:
+    async def _remove_player_from_cell(self, runtime_cell_id: Union[str, UUID], runtime_entity_id: Union[str, UUID]) -> None:
         """플레이어를 셀에서 제거"""
         try:
             pool = await self.db.pool
@@ -906,32 +913,32 @@ class CellManager:
                 # 플레이어를 셀에서 제거하는 로직
                 await conn.execute("""
                     DELETE FROM runtime_data.cell_occupants 
-                    WHERE cell_id = $1 AND entity_id = $2
+                    WHERE runtime_cell_id = $1 AND runtime_entity_id = $2
                 """, 
-                cell_id, 
-                player_id
+                runtime_cell_id, 
+                runtime_entity_id
                 )
                 
-                self.logger.info(f"Player {player_id} removed from cell {cell_id}")
+                self.logger.info(f"Player {runtime_entity_id} removed from cell {runtime_cell_id}")
                 
         except Exception as e:
             self.logger.error(f"Failed to remove player from cell: {str(e)}")
             raise
 
-    async def add_entity_to_cell(self, entity_id: str, cell_id: str) -> CellResult:
+    async def add_entity_to_cell(self, runtime_entity_id: Union[str, UUID], runtime_cell_id: Union[str, UUID]) -> CellResult:
         """
         엔티티를 셀에 추가 (범용 메서드)
         
         Args:
-            entity_id: 엔티티 ID
-            cell_id: 셀 ID
+            runtime_entity_id: 런타임 엔티티 ID
+            runtime_cell_id: 런타임 셀 ID
             
         Returns:
             CellResult: 결과
         """
         try:
             # 셀 존재 확인
-            cell_result = await self.get_cell(cell_id)
+            cell_result = await self.get_cell(runtime_cell_id)
             if not cell_result.success:
                 return cell_result
             
@@ -948,14 +955,14 @@ class CellManager:
                     ),
                     updated_at = NOW()
                     WHERE runtime_entity_id = $2
-                """, cell_id, entity_id)
+                """, runtime_cell_id, runtime_entity_id)
             
             # 컨텐츠 캐시 무효화
             async with self._cache_lock:
-                if cell_id in self._content_cache:
-                    del self._content_cache[cell_id]
+                if runtime_cell_id in self._content_cache:
+                    del self._content_cache[runtime_cell_id]
             
-            self.logger.info(f"Entity {entity_id} added to cell {cell_id}")
+            self.logger.info(f"Entity {runtime_entity_id} added to cell {runtime_cell_id}")
             return CellResult.success_result(
                 cell_result.cell,
                 message=f"Entity added to cell '{cell_result.cell.name}'"
@@ -965,20 +972,20 @@ class CellManager:
             self.logger.error(f"Failed to add entity to cell: {str(e)}")
             return CellResult.error_result(f"Failed to add entity to cell: {str(e)}", str(e))
     
-    async def remove_entity_from_cell(self, entity_id: str, cell_id: str) -> CellResult:
+    async def remove_entity_from_cell(self, runtime_entity_id: Union[str, UUID], runtime_cell_id: Union[str, UUID]) -> CellResult:
         """
         엔티티를 셀에서 제거 (범용 메서드)
         
         Args:
-            entity_id: 엔티티 ID
-            cell_id: 셀 ID
+            runtime_entity_id: 런타임 엔티티 ID
+            runtime_cell_id: 런타임 셀 ID
             
         Returns:
             CellResult: 결과
         """
         try:
             # 셀 존재 확인
-            cell_result = await self.get_cell(cell_id)
+            cell_result = await self.get_cell(runtime_cell_id)
             if not cell_result.success:
                 return cell_result
             
@@ -991,14 +998,14 @@ class CellManager:
                     SET current_position = current_position - 'current_cell_id',
                     updated_at = NOW()
                     WHERE runtime_entity_id = $1
-                """, entity_id)
+                """, runtime_entity_id)
             
             # 컨텐츠 캐시 무효화
             async with self._cache_lock:
-                if cell_id in self._content_cache:
-                    del self._content_cache[cell_id]
+                if runtime_cell_id in self._content_cache:
+                    del self._content_cache[runtime_cell_id]
             
-            self.logger.info(f"Entity {entity_id} removed from cell {cell_id}")
+            self.logger.info(f"Entity {runtime_entity_id} removed from cell {runtime_cell_id}")
             return CellResult.success_result(
                 cell_result.cell,
                 message=f"Entity removed from cell '{cell_result.cell.name}'"
@@ -1010,18 +1017,18 @@ class CellManager:
     
     async def move_entity_between_cells(
         self, 
-        entity_id: str, 
-        from_cell_id: str, 
-        to_cell_id: str,
+        runtime_entity_id: Union[str, UUID], 
+        from_runtime_cell_id: Union[str, UUID], 
+        to_runtime_cell_id: Union[str, UUID],
         new_position: Dict[str, float] = None
     ) -> CellResult:
         """
         엔티티를 한 셀에서 다른 셀로 이동
         
         Args:
-            entity_id: 엔티티 ID
-            from_cell_id: 출발 셀 ID
-            to_cell_id: 도착 셀 ID
+            runtime_entity_id: 런타임 엔티티 ID
+            from_runtime_cell_id: 출발 런타임 셀 ID
+            to_runtime_cell_id: 도착 런타임 셀 ID
             new_position: 새 위치 (선택사항)
             
         Returns:
@@ -1033,12 +1040,12 @@ class CellManager:
             async with pool.acquire() as conn:
                 async with conn.transaction():
                     # 1. 출발 셀에서 제거
-                    remove_result = await self.remove_entity_from_cell(entity_id, from_cell_id)
+                    remove_result = await self.remove_entity_from_cell(runtime_entity_id, from_runtime_cell_id)
                     if not remove_result.success:
                         return remove_result
                     
                     # 2. 도착 셀에 추가
-                    add_result = await self.add_entity_to_cell(entity_id, to_cell_id)
+                    add_result = await self.add_entity_to_cell(runtime_entity_id, to_runtime_cell_id)
                     if not add_result.success:
                         return add_result
                     
@@ -1046,19 +1053,19 @@ class CellManager:
                     if new_position:
                         # current_cell_id를 유지하면서 좌표만 업데이트
                         position_with_cell = new_position.copy()
-                        position_with_cell['current_cell_id'] = to_cell_id
+                        position_with_cell['current_cell_id'] = to_runtime_cell_id
                         
                         await conn.execute("""
                             UPDATE runtime_data.entity_states
                             SET current_position = $1,
                             updated_at = NOW()
                             WHERE runtime_entity_id = $2
-                        """, serialize_jsonb_data(position_with_cell), entity_id)
+                        """, serialize_jsonb_data(position_with_cell), runtime_entity_id)
             
-            self.logger.info(f"Entity {entity_id} moved from {from_cell_id} to {to_cell_id}")
+            self.logger.info(f"Entity {runtime_entity_id} moved from {from_runtime_cell_id} to {to_runtime_cell_id}")
             
             # 도착 셀 반환
-            to_cell_result = await self.get_cell(to_cell_id)
+            to_cell_result = await self.get_cell(to_runtime_cell_id)
             return CellResult.success_result(
                 to_cell_result.cell,
                 message=f"Entity moved to cell '{to_cell_result.cell.name}'"

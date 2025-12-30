@@ -345,58 +345,16 @@ class GameManager:
             return
         
         try:
-            # 세션 정리 - 외래키 제약조건을 고려한 순서로 정리
+            # DB FK CASCADE가 모든 런타임/레퍼런스 레이어 정리를 담당
             pool = await self.db.pool
             async with pool.acquire() as conn:
-                async with conn.transaction():
-                    # 1. 먼저 active_sessions에서 플레이어 참조 제거
-                    await conn.execute(
-                        """
-                        UPDATE runtime_data.active_sessions
-                        SET player_runtime_entity_id = NULL
-                        WHERE session_id = $1
-                        """,
-                        self.current_session_id
-                    )
-                    
-                    # 2. 엔티티 상태 삭제
-                    await conn.execute(
-                        """
-                        DELETE FROM runtime_data.entity_states
-                        WHERE runtime_entity_id IN (
-                            SELECT runtime_entity_id FROM reference_layer.entity_references
-                            WHERE session_id = $1
-                        )
-                        """,
-                        self.current_session_id
-                    )
-                    
-                    # 3. 엔티티 참조 삭제
-                    await conn.execute(
-                        """
-                        DELETE FROM reference_layer.entity_references
-                        WHERE session_id = $1
-                        """,
-                        self.current_session_id
-                    )
-                    
-                    # 4. 셀 참조 삭제
-                    await conn.execute(
-                        """
-                        DELETE FROM reference_layer.cell_references
-                        WHERE session_id = $1
-                        """,
-                        self.current_session_id
-                    )
-                    
-                    # 5. 세션 삭제
-                    await conn.execute(
-                        """
-                        DELETE FROM runtime_data.active_sessions
-                        WHERE session_id = $1
-                        """,
-                        self.current_session_id
-                    )
+                await conn.execute(
+                    """
+                    DELETE FROM runtime_data.active_sessions
+                    WHERE session_id = $1
+                    """,
+                    self.current_session_id
+                )
             
             # 상태 초기화
             self.current_session_id = None
