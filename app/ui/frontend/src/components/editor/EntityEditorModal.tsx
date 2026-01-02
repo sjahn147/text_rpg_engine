@@ -404,7 +404,7 @@ export const EntityEditorModal: React.FC<EntityEditorModalProps> = ({
                             newInventory.quantities[itemId] = Number(e.target.value);
                             setEntity({ ...entity, default_inventory: newInventory });
                           }}
-                          min="0"
+                          min={0}
                           style={{
                             width: '80px',
                             padding: '4px 8px',

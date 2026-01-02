@@ -96,7 +96,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                     type="number"
                     value={localSettings.autoSaveInterval}
                     onChange={(value) => setLocalSettings({ ...localSettings, autoSaveInterval: parseInt(value) || 30 })}
-                    min="10"
+                    min={10}
                   />
                 </FormField>
                 <FormField label="최근 프로젝트 개수" labelWidth={150}>
@@ -104,8 +104,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                     type="number"
                     value={localSettings.recentProjectsCount}
                     onChange={(value) => setLocalSettings({ ...localSettings, recentProjectsCount: parseInt(value) || 10 })}
-                    min="1"
-                    max="50"
+                    min={1}
+                    max={50}
                   />
                 </FormField>
               </CollapsibleSection>
@@ -146,8 +146,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                     type="number"
                     value={localSettings.undoRedoStackSize}
                     onChange={(value) => setLocalSettings({ ...localSettings, undoRedoStackSize: parseInt(value) || 50 })}
-                    min="10"
-                    max="200"
+                    min={10}
+                    max={200}
                   />
                 </FormField>
               </CollapsibleSection>
@@ -162,9 +162,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                     type="number"
                     value={localSettings.defaultZoomLevel}
                     onChange={(value) => setLocalSettings({ ...localSettings, defaultZoomLevel: parseFloat(value) || 1.0 })}
-                    min="0.1"
-                    max="5.0"
-                    step="0.1"
+                    min={0.1}
+                    max={5.0}
+                    step={0.1}
                   />
                 </FormField>
                 <FormField label="그리드 표시 기본값" labelWidth={150}>
@@ -190,8 +190,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                     type="number"
                     value={localSettings.fontSize}
                     onChange={(value) => setLocalSettings({ ...localSettings, fontSize: parseInt(value) || 13 })}
-                    min="10"
-                    max="20"
+                    min={10}
+                    max={20}
                   />
                 </FormField>
               </CollapsibleSection>
@@ -206,8 +206,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                     type="number"
                     value={localSettings.virtualScrollThreshold}
                     onChange={(value) => setLocalSettings({ ...localSettings, virtualScrollThreshold: parseInt(value) || 100 })}
-                    min="50"
-                    max="1000"
+                    min={50}
+                    max={1000}
                   />
                 </FormField>
                 <FormField label="캐시 크기" labelWidth={150}>
@@ -215,8 +215,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                     type="number"
                     value={localSettings.cacheSize}
                     onChange={(value) => setLocalSettings({ ...localSettings, cacheSize: parseInt(value) || 100 })}
-                    min="10"
-                    max="1000"
+                    min={10}
+                    max={1000}
                   />
                 </FormField>
                 <FormField label="자동 최적화" labelWidth={150}>

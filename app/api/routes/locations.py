@@ -8,6 +8,7 @@ from app.api.schemas import (
     LocationCreate, LocationUpdate, LocationResponse, LocationResolvedResponse
 )
 from app.services.world_editor.location_service import LocationService
+from app.services.world_editor.id_generator import IDGenerator
 
 router = APIRouter()
 location_service = LocationService()
@@ -43,12 +44,36 @@ async def get_location(location_id: str):
 @router.post("/", response_model=LocationResponse)
 async def create_location(location_data: LocationCreate):
     """새 위치 생성"""
+    # ID가 제공된 경우 규칙 검증
+    if location_data.location_id:
+        is_valid, error_msg = IDGenerator.validate_id('location', location_data.location_id)
+        if not is_valid:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid location_id format: {error_msg}"
+            )
+    else:
+        # ID가 없으면 자동 생성
+        id_generator = IDGenerator()
+        location_data.location_id = await id_generator.generate_location_id(
+            location_data.region_id,
+            location_data.location_name
+        )
+    
     return await location_service.create_location(location_data)
 
 
 @router.put("/{location_id}", response_model=LocationResponse)
 async def update_location(location_id: str, location_data: LocationUpdate):
     """위치 정보 업데이트"""
+    # 위치 ID 규칙 검증
+    is_valid, error_msg = IDGenerator.validate_id('location', location_id)
+    if not is_valid:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid location_id format: {error_msg}"
+        )
+    
     return await location_service.update_location(location_id, location_data)
 
 

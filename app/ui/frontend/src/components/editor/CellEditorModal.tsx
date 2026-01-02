@@ -2,7 +2,7 @@
  * Cell 편집 모달
  */
 import React, { useState, useEffect } from 'react';
-import { CellData, LocationData } from '../types';
+import { CellData, LocationData } from '../../types';
 import { cellsApi, locationsApi, entitiesApi, managementApi, worldObjectsApi } from '../../services/api';
 import { Modal } from '../common/ui/Modal';
 import { CollapsibleSection } from '../common/ui/CollapsibleSection';

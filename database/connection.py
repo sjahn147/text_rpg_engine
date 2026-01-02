@@ -2,6 +2,7 @@ import asyncpg
 from typing import Optional
 import logging
 import os
+import sys
 from dotenv import load_dotenv
 from app.config.app_config import get_db_settings
 
@@ -32,17 +33,33 @@ class DatabaseConnection:
             return
             
         try:
+            # 테스트 환경 고려: 연결 풀 크기 증가
+            # 테스트 실행 시 여러 테스트가 동시에 실행될 수 있으므로
+            # max_size를 증가시켜 연결 풀 고갈 방지
+            is_test = (
+                "pytest" in sys.modules or 
+                any("pytest" in arg for arg in sys.argv) or
+                "PYTEST_CURRENT_TEST" in os.environ
+            )
+            
+            # 연결 풀 크기: 성능과 안정성의 균형
+            # 테스트 환경: session 스코프로 연결 풀 공유하므로 적절한 크기 유지
+            # 프로덕션: 실제 부하에 맞게 조정
+            min_size = 2
+            max_size = 15 if is_test else 10  # 테스트: 15 (session 공유로 효율적), 프로덕션: 10
+            
             self._pool = await asyncpg.create_pool(
                 host=self.host,
                 port=self.port,
                 user=self.user,
                 password=self.password,
                 database=self.database,
-                min_size=2,
-                max_size=10
+                min_size=min_size,
+                max_size=max_size,
+                command_timeout=60  # 테스트 환경에서 타임아웃 증가
             )
             self._is_initialized = True
-            self.logger.info("Database connection pool initialized successfully")
+            self.logger.info(f"Database connection pool initialized successfully (min={min_size}, max={max_size}, test={is_test})")
         except Exception as e:
             self.logger.error(f"Failed to initialize database connection pool: {str(e)}")
             raise

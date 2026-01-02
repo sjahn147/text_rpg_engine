@@ -47,24 +47,25 @@ class InstanceFactory:
                 if customization:
                     self._deep_update(properties, customization)
 
-                # 3. 참조 레이어에 등록
-                runtime_entity_id = str(uuid.uuid4())
+                # 3. runtime_entity_id 생성
+                runtime_entity_id = uuid.uuid4()  # UUID 객체로 생성 (asyncpg가 자동 변환)
+                
+                # 4. runtime_entities 먼저 생성 (외래키 제약조건을 위해 필수)
+                await conn.execute(
+                    """
+                    INSERT INTO runtime_data.runtime_entities 
+                    (runtime_entity_id, game_entity_id, session_id, created_at)
+                    VALUES ($1, $2, $3, NOW())
+                    """,
+                    runtime_entity_id, game_entity_id, session_id
+                )
+
+                # 5. 참조 레이어에 등록
                 await conn.execute(
                     """
                     INSERT INTO reference_layer.entity_references 
                     (runtime_entity_id, game_entity_id, session_id, entity_type, is_player)
                     VALUES ($1, $2, $3, 'npc', FALSE)
-                    """,
-                    runtime_entity_id, game_entity_id, session_id
-                )
-
-                # 3-1. runtime_entities 테이블에 등록 (외래키 제약조건을 위해 필요)
-                await conn.execute(
-                    """
-                    INSERT INTO runtime_data.runtime_entities 
-                    (runtime_entity_id, game_entity_id, session_id)
-                    VALUES ($1, $2, $3)
-                    ON CONFLICT (runtime_entity_id) DO NOTHING
                     """,
                     runtime_entity_id, game_entity_id, session_id
                 )
@@ -122,24 +123,25 @@ class InstanceFactory:
                 if customization:
                     self._deep_update(properties, customization)
 
-                # 3. 참조 레이어에 등록
-                runtime_entity_id = str(uuid.uuid4())
+                # 3. runtime_entity_id 생성
+                runtime_entity_id = uuid.uuid4()  # UUID 객체로 생성 (asyncpg가 자동 변환)
+                
+                # 4. runtime_entities 먼저 생성 (외래키 제약조건을 위해 필수)
+                await conn.execute(
+                    """
+                    INSERT INTO runtime_data.runtime_entities 
+                    (runtime_entity_id, game_entity_id, session_id, created_at)
+                    VALUES ($1, $2, $3, NOW())
+                    """,
+                    runtime_entity_id, game_entity_id, session_id
+                )
+
+                # 5. 참조 레이어에 등록
                 await conn.execute(
                     """
                     INSERT INTO reference_layer.entity_references 
                     (runtime_entity_id, game_entity_id, session_id, entity_type, is_player)
                     VALUES ($1, $2, $3, 'player', TRUE)
-                    """,
-                    runtime_entity_id, game_entity_id, session_id
-                )
-
-                # 3-1. runtime_entities 테이블에 등록 (외래키 제약조건을 위해 필요)
-                await conn.execute(
-                    """
-                    INSERT INTO runtime_data.runtime_entities 
-                    (runtime_entity_id, game_entity_id, session_id)
-                    VALUES ($1, $2, $3)
-                    ON CONFLICT (runtime_entity_id) DO NOTHING
                     """,
                     runtime_entity_id, game_entity_id, session_id
                 )
@@ -196,7 +198,7 @@ class InstanceFactory:
                     self._deep_update(properties, customization)
 
                 # 3. 참조 레이어에 등록
-                runtime_object_id = str(uuid.uuid4())
+                runtime_object_id = uuid.uuid4()  # UUID 객체로 생성 (asyncpg가 자동 변환)
                 await conn.execute(
                     """
                     INSERT INTO reference_layer.object_references 
@@ -298,10 +300,22 @@ class InstanceFactory:
                 if customization:
                     self._deep_update(properties, customization)
 
-                # 3. 참조 레이어에 등록
-                runtime_cell_id = str(uuid.uuid4())
+                # 3. 런타임 셀 ID 생성 (UUID 객체)
+                runtime_cell_id = uuid.uuid4()
                 # cell_type은 템플릿에서 가져오거나 기본값 사용
                 cell_type = template.get('cell_type') or 'indoor'
+                
+                # 4. runtime_cells에 먼저 생성 (FK 제약조건을 위해 필수)
+                await conn.execute(
+                    """
+                    INSERT INTO runtime_data.runtime_cells (
+                        runtime_cell_id, game_cell_id, session_id, status, cell_type, created_at
+                    ) VALUES ($1, $2, $3, $4, $5, NOW())
+                    """,
+                    runtime_cell_id, game_cell_id, session_id, "active", cell_type
+                )
+                
+                # 5. 참조 레이어에 등록
                 await conn.execute(
                     """
                     INSERT INTO reference_layer.cell_references
@@ -311,7 +325,7 @@ class InstanceFactory:
                     runtime_cell_id, game_cell_id, session_id, cell_type
                 )
 
-                return runtime_cell_id
+                return str(runtime_cell_id)
 
     def _deep_update(self, base: Dict, update: Dict):
         """딕셔너리를 재귀적으로 업데이트합니다."""

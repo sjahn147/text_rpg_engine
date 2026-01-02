@@ -1,4 +1,5 @@
 from typing import Dict, List, Any, Optional
+from uuid import UUID
 import json
 import uuid
 from datetime import datetime
@@ -22,12 +23,48 @@ class InstanceManager:
 
     async def create_cell_instance(self, game_cell_id: str, session_id: str) -> str:
         """셀 인스턴스를 생성합니다."""
-        runtime_cell_id = await self.reference_layer.create_cell_reference(
-            game_cell_id=game_cell_id,
-            session_id=session_id
-        )
+        # 원칙: runtime_data → reference_layer 순서
+        # 모든 작업을 하나의 트랜잭션으로 처리하여 원자성 보장
+        runtime_cell_id = uuid.uuid4()
+        pool = await self.db.pool
+        async with pool.acquire() as conn:
+            async with conn.transaction():
+                # 1. 게임 데이터에서 템플릿 로드하여 cell_type 확인
+                game_cell = await self.game_data.get_world_cell(game_cell_id)
+                if not game_cell:
+                    raise ValueError(f"Cell template not found: {game_cell_id}")
+                
+                cell_type = 'indoor'  # 기본값
+                if 'cell_type' in game_cell:
+                    cell_type = game_cell['cell_type']
+                elif game_cell.get('cell_properties'):
+                    import json
+                    cell_properties = game_cell['cell_properties']
+                    if isinstance(cell_properties, str):
+                        cell_properties = json.loads(cell_properties)
+                    cell_type = cell_properties.get('cell_type', 'indoor')
+                
+                # 2. runtime_cells에 먼저 생성 (FK 제약조건을 위해 필수)
+                await conn.execute(
+                    """
+                    INSERT INTO runtime_data.runtime_cells (
+                        runtime_cell_id, game_cell_id, session_id, status, cell_type, created_at
+                    ) VALUES ($1, $2, $3, $4, $5, NOW())
+                    """,
+                    runtime_cell_id, game_cell_id, session_id, "active", cell_type
+                )
+                
+                # 3. reference_layer에 매핑 저장
+                await conn.execute(
+                    """
+                    INSERT INTO reference_layer.cell_references
+                    (runtime_cell_id, game_cell_id, session_id, cell_type)
+                    VALUES ($1, $2, $3, $4)
+                    """,
+                    runtime_cell_id, game_cell_id, session_id, cell_type
+                )
         
-        return runtime_cell_id
+        return str(runtime_cell_id)
 
     async def create_entity_instance(
         self,
@@ -36,22 +73,48 @@ class InstanceManager:
         runtime_cell_id: str,
         position: Dict[str, float],
         entity_type: str = "npc"
-    ) -> str:
+    ) -> UUID:
         """엔티티 인스턴스를 생성합니다."""
-        # 1. 엔티티 참조 생성
-        runtime_entity_id = await self.reference_layer.create_entity_reference(
-            game_entity_id=game_entity_id,
-            session_id=session_id,
-            entity_type=entity_type,
-            is_player=(entity_type == "player")
-        )
-        
-        # 2. 엔티티 상태 생성
-        await self.runtime_data.create_entity_state(
-            runtime_entity_id=runtime_entity_id,
-            runtime_cell_id=runtime_cell_id,
-            position=position
-        )
+        # 원칙: game_data → runtime_data → reference_layer 순서
+        # 모든 작업을 하나의 트랜잭션으로 처리하여 원자성 보장
+        runtime_entity_id = uuid.uuid4()
+        pool = await self.db.pool
+        async with pool.acquire() as conn:
+            async with conn.transaction():
+                # 1. runtime_entities 생성 (FK 제약조건을 위해 먼저 생성)
+                await conn.execute("""
+                    INSERT INTO runtime_data.runtime_entities 
+                    (runtime_entity_id, game_entity_id, session_id, created_at)
+                    VALUES ($1, $2, $3, NOW())
+                """, runtime_entity_id, game_entity_id, session_id)
+                
+                # 2. entity_references 생성
+                await conn.execute("""
+                    INSERT INTO reference_layer.entity_references
+                    (runtime_entity_id, game_entity_id, session_id, entity_type, is_player)
+                    VALUES ($1, $2, $3, $4, $5)
+                """, runtime_entity_id, game_entity_id, session_id, entity_type, (entity_type == "player"))
+                
+                # 3. entity_states 생성
+                from common.utils.jsonb_handler import serialize_jsonb_data
+                await conn.execute("""
+                    INSERT INTO runtime_data.entity_states
+                    (runtime_entity_id, session_id, current_stats, current_position, active_effects, inventory, equipped_items)
+                    VALUES ($1, $2, $3, $4, $5, $6, $7)
+                """,
+                runtime_entity_id,
+                session_id,
+                serialize_jsonb_data({}),
+                serialize_jsonb_data({
+                    "x": position.get("x", 0.0),
+                    "y": position.get("y", 0.0),
+                    "z": position.get("z", 0.0),
+                    "runtime_cell_id": runtime_cell_id
+                }),
+                serialize_jsonb_data([]),
+                serialize_jsonb_data({}),
+                serialize_jsonb_data({})
+                )
         
         return runtime_entity_id
 

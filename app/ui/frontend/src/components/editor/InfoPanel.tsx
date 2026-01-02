@@ -2,7 +2,7 @@
  * 정보 패널 컴포넌트
  */
 import React, { useState } from 'react';
-import { PinData, RoadData, RegionData, LocationData, CellData, DnDLocationInfo } from '../types';
+import { PinData, RoadData, RegionData, LocationData, CellData, DnDLocationInfo } from '../../types';
 import { DnDInfoForm } from './DnDInfoForm';
 import { regionsApi, locationsApi, cellsApi } from '../../services/api';
 

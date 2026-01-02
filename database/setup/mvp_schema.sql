@@ -8,6 +8,52 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- =====================================================
+-- ENUM 타입 정의
+-- =====================================================
+
+-- entity_type_enum
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'entity_type_enum') THEN
+        CREATE TYPE entity_type_enum AS ENUM (
+            'player',
+            'npc',
+            'monster',
+            'creature'
+        );
+    END IF;
+END $$;
+
+-- carrier_type_enum
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'carrier_type_enum') THEN
+        CREATE TYPE carrier_type_enum AS ENUM (
+            'skill',
+            'buff',
+            'item',
+            'blessing',
+            'curse',
+            'ritual'
+        );
+    END IF;
+END $$;
+
+-- effect_type_enum (향후 사용을 위해)
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'effect_type_enum') THEN
+        CREATE TYPE effect_type_enum AS ENUM (
+            'damage',
+            'heal',
+            'buff',
+            'debuff',
+            'status'
+        );
+    END IF;
+END $$;
+
+-- =====================================================
 -- 스키마 생성
 -- =====================================================
 CREATE SCHEMA IF NOT EXISTS game_data;
@@ -171,7 +217,7 @@ COMMENT ON COLUMN game_data.dialogue_knowledge.knowledge_properties IS 'JSONB �
 -- ID 명명 규칙: [종족]_[직업/역할]_[일련번호]
 CREATE TABLE game_data.entities (
     entity_id VARCHAR(50) PRIMARY KEY,
-    entity_type VARCHAR(50) NOT NULL,
+    entity_type entity_type_enum NOT NULL,
     entity_name VARCHAR(100) NOT NULL,
     entity_description TEXT,
     base_stats JSONB,
@@ -509,7 +555,7 @@ CREATE TABLE reference_layer.entity_references (
     runtime_entity_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     game_entity_id VARCHAR(50) NOT NULL,
     session_id UUID NOT NULL,
-    entity_type VARCHAR(50) NOT NULL,
+    entity_type entity_type_enum NOT NULL,
     is_player BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -659,7 +705,7 @@ COMMENT ON TABLE runtime_data.runtime_cell_entities IS '셀-엔티티 관계 (�
 CREATE TABLE runtime_data.cell_occupants (
     runtime_cell_id UUID NOT NULL,
     runtime_entity_id UUID NOT NULL,
-    entity_type VARCHAR(50) NOT NULL,
+    entity_type entity_type_enum NOT NULL,
     position JSONB,
     entered_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (runtime_cell_id, runtime_entity_id),
@@ -673,12 +719,121 @@ CREATE INDEX idx_cell_occupants_entity_id ON runtime_data.cell_occupants(runtime
 CREATE INDEX idx_cell_occupants_entered_at ON runtime_data.cell_occupants(entered_at);
 
 -- 코멘트 추가
-COMMENT ON TABLE runtime_data.cell_occupants IS '셀 내 엔티티 위치 정보';
+COMMENT ON TABLE runtime_data.cell_occupants IS '셀 내 엔티티 위치 정보 (SSOT: entity_states.current_position에서 자동 동기화)';
 COMMENT ON COLUMN runtime_data.cell_occupants.runtime_cell_id IS '런타임 셀 ID';
 COMMENT ON COLUMN runtime_data.cell_occupants.runtime_entity_id IS '런타임 엔티티 ID';
 COMMENT ON COLUMN runtime_data.cell_occupants.entity_type IS '엔티티 타입';
 COMMENT ON COLUMN runtime_data.cell_occupants.position IS '셀 내 위치 (JSONB)';
 COMMENT ON COLUMN runtime_data.cell_occupants.entered_at IS '진입 시간';
+
+-- =====================================================
+-- SSOT: cell_occupants 직접 쓰기 방지 및 자동 동기화
+-- =====================================================
+
+-- 1. cell_occupants 직접 쓰기 방지 트리거 함수
+CREATE OR REPLACE FUNCTION runtime_data.prevent_cell_occupants_direct_write()
+RETURNS TRIGGER AS $$
+BEGIN
+    RAISE EXCEPTION 
+        'cell_occupants는 직접 수정할 수 없습니다. '
+        'entity_states.current_position을 수정하면 자동으로 동기화됩니다. '
+        '직접 INSERT/UPDATE/DELETE를 사용하지 마세요.';
+END;
+$$ LANGUAGE plpgsql;
+
+-- 트리거 생성
+DROP TRIGGER IF EXISTS trg_prevent_cell_occupants_direct_write ON runtime_data.cell_occupants;
+CREATE TRIGGER trg_prevent_cell_occupants_direct_write
+BEFORE INSERT OR UPDATE OR DELETE ON runtime_data.cell_occupants
+FOR EACH ROW EXECUTE FUNCTION runtime_data.prevent_cell_occupants_direct_write();
+
+-- 2. entity_states.current_position 변경 시 cell_occupants 자동 동기화 함수
+CREATE OR REPLACE FUNCTION runtime_data.sync_cell_occupants_from_position()
+RETURNS TRIGGER AS $$
+DECLARE
+    v_runtime_cell_id UUID;
+    v_old_runtime_cell_id UUID;
+    v_entity_type VARCHAR(50);
+    v_position JSONB;
+BEGIN
+    -- current_position에서 runtime_cell_id 추출
+    IF NEW.current_position IS NOT NULL 
+       AND jsonb_typeof(NEW.current_position -> 'runtime_cell_id') = 'string' THEN
+        v_runtime_cell_id := (NEW.current_position->>'runtime_cell_id')::uuid;
+    ELSE
+        v_runtime_cell_id := NULL;
+    END IF;
+    
+    -- entity_type 조회
+    SELECT er.entity_type INTO v_entity_type
+    FROM reference_layer.entity_references er
+    WHERE er.runtime_entity_id = NEW.runtime_entity_id
+    LIMIT 1;
+    
+    -- position 추출 (셀 내 위치 정보)
+    v_position := NEW.current_position;
+    IF v_position IS NOT NULL THEN
+        -- runtime_cell_id는 제외하고 position만 저장
+        v_position := v_position - 'runtime_cell_id';
+    END IF;
+    
+    -- UPDATE인 경우 이전 셀 ID 추출
+    IF TG_OP = 'UPDATE' AND OLD.current_position IS NOT NULL THEN
+        IF jsonb_typeof(OLD.current_position -> 'runtime_cell_id') = 'string' THEN
+            v_old_runtime_cell_id := (OLD.current_position->>'runtime_cell_id')::uuid;
+        END IF;
+    END IF;
+    
+    -- cell_occupants 동기화
+    -- 직접 쓰기 방지 트리거를 우회하기 위해 session_replication_role을 'replica'로 설정
+    PERFORM set_config('session_replication_role', 'replica', true);
+    
+    -- UPDATE인 경우 이전 셀에서 제거
+    IF TG_OP = 'UPDATE' AND v_old_runtime_cell_id IS NOT NULL AND 
+       (v_runtime_cell_id IS NULL OR v_old_runtime_cell_id != v_runtime_cell_id) THEN
+        DELETE FROM runtime_data.cell_occupants
+        WHERE runtime_cell_id = v_old_runtime_cell_id
+          AND runtime_entity_id = NEW.runtime_entity_id;
+    END IF;
+    
+    -- 새 셀에 추가 또는 업데이트
+    IF v_runtime_cell_id IS NOT NULL THEN
+        INSERT INTO runtime_data.cell_occupants 
+        (runtime_cell_id, runtime_entity_id, entity_type, position, entered_at)
+        VALUES (
+            v_runtime_cell_id,
+            NEW.runtime_entity_id,
+            COALESCE(v_entity_type, 'unknown'),
+            v_position,
+            COALESCE(NEW.updated_at, NOW())
+        )
+        ON CONFLICT (runtime_cell_id, runtime_entity_id)
+        DO UPDATE SET
+            entity_type = EXCLUDED.entity_type,
+            position = EXCLUDED.position,
+            entered_at = CASE 
+                WHEN cell_occupants.runtime_cell_id != EXCLUDED.runtime_cell_id 
+                THEN EXCLUDED.entered_at
+                ELSE cell_occupants.entered_at
+            END;
+    ELSE
+        -- runtime_cell_id가 없으면 cell_occupants에서 제거
+        DELETE FROM runtime_data.cell_occupants
+        WHERE runtime_entity_id = NEW.runtime_entity_id;
+    END IF;
+    
+    PERFORM set_config('session_replication_role', 'origin', true);
+    
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- 동기화 트리거 생성
+DROP TRIGGER IF EXISTS trg_sync_cell_occupants_from_position ON runtime_data.entity_states;
+CREATE TRIGGER trg_sync_cell_occupants_from_position
+AFTER INSERT OR UPDATE OF current_position ON runtime_data.entity_states
+FOR EACH ROW
+EXECUTE FUNCTION runtime_data.sync_cell_occupants_from_position();
 -- SSOT: 위치의 기록/갱신은 runtime_data.entity_states.current_position이 단일 진실원;
 -- cell_occupants는 조회 편의를 위한 파생 테이블로 서비스 로직만이 갱신하도록 제한한다.
 
@@ -984,6 +1139,7 @@ CREATE TABLE game_data.time_events (
 
 CREATE INDEX idx_time_events_type ON game_data.time_events(event_type);
 CREATE INDEX idx_time_events_active ON game_data.time_events(is_active);
+CREATE INDEX idx_time_events_trigger_time ON game_data.time_events(trigger_day, trigger_hour, trigger_minute);
 
 COMMENT ON TABLE game_data.time_events IS '시간 기반 이벤트 스케줄 (템플릿)';
 COMMENT ON COLUMN game_data.time_events.event_data IS 'JSONB 구조: {"description": "상점 오픈", "affected_entities": ["merchant_001"], "world_changes": {"shop_open": true}}';
@@ -1035,12 +1191,52 @@ CREATE TABLE runtime_data.entity_states (
     ) STORED,
     FOREIGN KEY (runtime_entity_id) REFERENCES runtime_data.runtime_entities(runtime_entity_id) ON DELETE CASCADE,
     FOREIGN KEY (session_id) REFERENCES runtime_data.active_sessions(session_id) ON DELETE CASCADE,
-    FOREIGN KEY (current_cell_id) REFERENCES runtime_data.runtime_cells(runtime_cell_id) ON DELETE SET NULL
+    FOREIGN KEY (current_cell_id) REFERENCES runtime_data.runtime_cells(runtime_cell_id) ON DELETE SET NULL,
+    -- JSONB 구조 검증 제약조건
+    CONSTRAINT chk_position_structure CHECK (
+        current_position IS NULL OR
+        (
+            jsonb_typeof(current_position -> 'x') IN ('number', 'null') AND
+            jsonb_typeof(current_position -> 'y') IN ('number', 'null') AND
+            (
+                NOT (current_position ? 'runtime_cell_id') OR
+                (
+                    jsonb_typeof(current_position -> 'runtime_cell_id') = 'string' AND
+                    (current_position->>'runtime_cell_id') ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+                )
+            )
+        )
+    ),
+    CONSTRAINT chk_inventory_structure CHECK (
+        inventory IS NULL OR
+        (
+            jsonb_typeof(inventory) = 'object' AND
+            (
+                NOT (inventory ? 'items') OR
+                jsonb_typeof(inventory -> 'items') = 'array'
+            )
+        )
+    ),
+    CONSTRAINT chk_stats_structure CHECK (
+        current_stats IS NULL OR
+        (
+            jsonb_typeof(current_stats) = 'object' AND
+            (
+                NOT (current_stats ? 'hp') OR
+                jsonb_typeof(current_stats -> 'hp') IN ('number', 'null')
+            ) AND
+            (
+                NOT (current_stats ? 'mp') OR
+                jsonb_typeof(current_stats -> 'mp') IN ('number', 'null')
+            )
+        )
+    )
 );
 
 CREATE INDEX idx_entity_states_entity ON runtime_data.entity_states(runtime_entity_id);
 
 COMMENT ON TABLE runtime_data.entity_states IS '엔티티별 상태 관리 (HP, MP, 위치, 인벤토리 등)';
+COMMENT ON COLUMN runtime_data.entity_states.current_position IS 'SSOT: 위치의 기록/갱신은 runtime_data.entity_states.current_position이 단일 진실원. cell_occupants는 자동 동기화됨';
 
 -- Object States (오브젝트별 상태 관리)
 CREATE TABLE runtime_data.object_states (
@@ -1050,7 +1246,25 @@ CREATE TABLE runtime_data.object_states (
     current_position JSONB,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (runtime_object_id) REFERENCES runtime_data.runtime_objects(runtime_object_id) ON DELETE CASCADE
+    FOREIGN KEY (runtime_object_id) REFERENCES runtime_data.runtime_objects(runtime_object_id) ON DELETE CASCADE,
+    -- JSONB 구조 검증 제약조건
+    CONSTRAINT chk_object_state_structure CHECK (
+        current_state IS NULL OR
+        (
+            jsonb_typeof(current_state) = 'object' AND
+            (
+                NOT (current_state ? 'state') OR
+                jsonb_typeof(current_state -> 'state') = 'string'
+            )
+        )
+    ),
+    CONSTRAINT chk_object_position_structure CHECK (
+        current_position IS NULL OR
+        (
+            jsonb_typeof(current_position -> 'x') IN ('number', 'null') AND
+            jsonb_typeof(current_position -> 'y') IN ('number', 'null')
+        )
+    )
 );
 
 CREATE INDEX idx_object_states_object ON runtime_data.object_states(runtime_object_id);
@@ -1203,7 +1417,7 @@ ON game_data.entity_behavior_schedules USING GIN (action_data);
 CREATE TABLE game_data.effect_carriers (
     effect_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     name VARCHAR(100) NOT NULL,
-    carrier_type VARCHAR(20) NOT NULL CHECK (carrier_type IN ('skill', 'buff', 'item', 'blessing', 'curse', 'ritual')),
+    carrier_type carrier_type_enum NOT NULL,
     effect_json JSONB NOT NULL,
     constraints_json JSONB DEFAULT '{}'::jsonb,
     source_entity_id VARCHAR(50),

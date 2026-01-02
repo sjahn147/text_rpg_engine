@@ -9,6 +9,8 @@ from app.api.schemas import (
 )
 from common.utils.logger import logger
 from common.utils.jsonb_handler import serialize_jsonb_data, parse_jsonb_data
+from app.common.decorators.error_handler import handle_service_errors
+from app.services.integrity_service import IntegrityService
 
 
 class CellService:
@@ -17,6 +19,7 @@ class CellService:
     def __init__(self, db_connection: Optional[DatabaseConnection] = None):
         self.db = db_connection or DatabaseConnection()
         self.game_data_repo = GameDataRepository(self.db)
+        self.integrity_service = IntegrityService(self.db)
     
     async def get_all_cells(self) -> List[CellResponse]:
         """모든 셀 조회 (SSOT 준수: owner_name은 JOIN으로 해결)"""
@@ -174,6 +177,7 @@ class CellService:
             logger.error(f"위치별 셀 조회 실패: {e}")
             raise
     
+    @handle_service_errors
     async def create_cell(self, cell_data: CellCreate) -> CellResponse:
         """새 셀 생성"""
         try:
@@ -203,6 +207,7 @@ class CellService:
             logger.error(f"셀 생성 실패: {e}")
             raise
     
+    @handle_service_errors
     async def update_cell(
         self, 
         cell_id: str, 
@@ -293,42 +298,8 @@ class CellService:
                 "cells_in_connections": ["CELL_004", ...]
             }
         """
-        pool = await self.db.pool
-        async with pool.acquire() as conn:
-            # 1. Location의 entry_points에 참조되는 경우
-            locations_in_entry_points = await conn.fetch("""
-                SELECT location_id, location_name
-                FROM game_data.world_locations
-                WHERE location_properties->'accessibility'->'entry_points' @> $1::jsonb
-            """, serialize_jsonb_data([{"cell_id": cell_id}]))
-            
-            # 2. 다른 Cell의 exits에 참조되는 경우
-            cells_in_exits = await conn.fetch("""
-                SELECT cell_id, cell_name
-                FROM game_data.world_cells
-                WHERE cell_properties->'structure'->'exits' @> $1::jsonb
-            """, serialize_jsonb_data([{"cell_id": cell_id}]))
-            
-            # 3. 다른 Cell의 entrances에 참조되는 경우
-            cells_in_entrances = await conn.fetch("""
-                SELECT cell_id, cell_name
-                FROM game_data.world_cells
-                WHERE cell_properties->'structure'->'entrances' @> $1::jsonb
-            """, serialize_jsonb_data([{"cell_id": cell_id}]))
-            
-            # 4. 다른 Cell의 connections에 참조되는 경우
-            cells_in_connections = await conn.fetch("""
-                SELECT cell_id, cell_name
-                FROM game_data.world_cells
-                WHERE cell_properties->'structure'->'connections' @> $1::jsonb
-            """, serialize_jsonb_data([{"cell_id": cell_id}]))
-            
-            return {
-                "locations_in_entry_points": [row['location_id'] for row in locations_in_entry_points],
-                "cells_in_exits": [row['cell_id'] for row in cells_in_exits],
-                "cells_in_entrances": [row['cell_id'] for row in cells_in_entrances],
-                "cells_in_connections": [row['cell_id'] for row in cells_in_connections]
-            }
+        # IntegrityService로 위임
+        return await self.integrity_service.validate_cell_references(cell_id)
     
     async def get_cell_resolved(self, cell_id: str) -> Optional[CellResolvedResponse]:
         """모든 참조를 해결한 셀 조회 (Phase 4)"""
@@ -468,41 +439,25 @@ class CellService:
             logger.error(f"해결된 셀 조회 실패: {e}")
             raise
     
+    @handle_service_errors
     async def delete_cell(self, cell_id: str) -> bool:
         """셀 삭제 (SSOT 참조 무결성 검증 포함)"""
-        try:
-            # 참조 검증
-            references = await self.validate_cell_references(cell_id)
+        # IntegrityService로 삭제 가능 여부 검사
+        check_result = await self.integrity_service.can_delete_cell(cell_id)
+        
+        if not check_result.can_delete:
+            raise ValueError(
+                f"셀 '{cell_id}'는 다음 위치에서 참조되고 있어 삭제할 수 없습니다:\n" +
+                check_result.error_message +
+                "\n\n참조를 먼저 제거한 후 삭제해주세요."
+            )
+        
+        pool = await self.db.pool
+        async with pool.acquire() as conn:
+            result = await conn.execute("""
+                DELETE FROM game_data.world_cells
+                WHERE cell_id = $1
+            """, cell_id)
             
-            conflicting_items = []
-            if references["locations_in_entry_points"]:
-                conflicting_items.append(f"Location entry point: {', '.join(references['locations_in_entry_points'])}")
-            if references["cells_in_exits"]:
-                conflicting_items.append(f"Cell exit: {', '.join(references['cells_in_exits'])}")
-            if references["cells_in_entrances"]:
-                conflicting_items.append(f"Cell entrance: {', '.join(references['cells_in_entrances'])}")
-            if references["cells_in_connections"]:
-                conflicting_items.append(f"Cell connection: {', '.join(references['cells_in_connections'])}")
-            
-            if conflicting_items:
-                raise ValueError(
-                    f"셀 '{cell_id}'는 다음 위치에서 참조되고 있어 삭제할 수 없습니다:\n" +
-                    "\n".join(conflicting_items) +
-                    "\n\n참조를 먼저 제거한 후 삭제해주세요."
-                )
-            
-            pool = await self.db.pool
-            async with pool.acquire() as conn:
-                result = await conn.execute("""
-                    DELETE FROM game_data.world_cells
-                    WHERE cell_id = $1
-                """, cell_id)
-                
-                return result == "DELETE 1"
-        except ValueError:
-            # 참조 무결성 에러는 그대로 전파
-            raise
-        except Exception as e:
-            logger.error(f"셀 삭제 실패: {e}")
-            raise
+            return result == "DELETE 1"
 

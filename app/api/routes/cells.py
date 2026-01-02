@@ -9,6 +9,7 @@ from app.api.schemas import (
     CellCreate, CellUpdate, CellResponse, CellResolvedResponse
 )
 from app.services.world_editor.cell_service import CellService
+from app.services.world_editor.id_generator import IDGenerator
 
 router = APIRouter()
 cell_service = CellService()
@@ -44,12 +45,36 @@ async def get_cell(cell_id: str):
 @router.post("/", response_model=CellResponse)
 async def create_cell(cell_data: CellCreate):
     """새 셀 생성"""
+    # ID가 제공된 경우 규칙 검증
+    if cell_data.cell_id:
+        is_valid, error_msg = IDGenerator.validate_id('cell', cell_data.cell_id)
+        if not is_valid:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid cell_id format: {error_msg}"
+            )
+    else:
+        # ID가 없으면 자동 생성
+        id_generator = IDGenerator()
+        cell_data.cell_id = await id_generator.generate_cell_id(
+            cell_data.location_id,
+            cell_data.cell_name or "UNNAMED"
+        )
+    
     return await cell_service.create_cell(cell_data)
 
 
 @router.put("/{cell_id}", response_model=CellResponse)
 async def update_cell(cell_id: str, cell_data: CellUpdate):
     """셀 정보 업데이트"""
+    # 셀 ID 규칙 검증
+    is_valid, error_msg = IDGenerator.validate_id('cell', cell_id)
+    if not is_valid:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid cell_id format: {error_msg}"
+        )
+    
     return await cell_service.update_cell(cell_id, cell_data)
 
 

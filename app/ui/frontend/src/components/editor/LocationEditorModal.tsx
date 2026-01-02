@@ -2,7 +2,7 @@
  * Location 편집 모달
  */
 import React, { useState, useEffect } from 'react';
-import { LocationData, CellData } from '../types';
+import { LocationData, CellData } from '../../types';
 import { locationsApi, cellsApi, managementApi } from '../../services/api';
 import { Modal } from '../common/ui/Modal';
 import { CollapsibleSection } from '../common/ui/CollapsibleSection';

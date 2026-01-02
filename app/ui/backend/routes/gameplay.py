@@ -177,6 +177,13 @@ async def start_new_game(request: StartGameRequest):
 @router.get("/state/{session_id}")
 async def get_current_state(session_id: str):
     """현재 게임 상태 조회"""
+    # UUID 형식 검증
+    try:
+        import uuid
+        uuid.UUID(session_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="잘못된 세션 ID 형식입니다.")
+    
     try:
         service = get_game_service()
         return await service.get_game_state(session_id)
@@ -336,20 +343,37 @@ async def interact_with_entity(request: InteractRequest):
 async def interact_with_object(request: InteractObjectRequest):
     """오브젝트와 상호작용"""
     try:
+        # 입력 검증
+        if not request.session_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="session_id가 필요합니다."
+            )
+        if not request.object_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="object_id가 필요합니다."
+            )
+        
+        logger.info(f"오브젝트 상호작용 요청: session_id={request.session_id}, object_id={request.object_id} (type={type(request.object_id).__name__}), action_type={request.action_type}")
         service = get_interaction_service()
         result = await service.interact_with_object(
             session_id=request.session_id,
             object_id=request.object_id,
             action_type=request.action_type
         )
+        logger.info(f"오브젝트 상호작용 성공: {result.get('message', '')}")
         return InteractResponse(**result)
+    except HTTPException:
+        raise
     except ValueError as e:
+        logger.warning(f"오브젝트 상호작용 실패 (ValueError): {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(e)
         )
     except Exception as e:
-        logger.error(f"오브젝트 상호작용 실패: {str(e)}")
+        logger.error(f"오브젝트 상호작용 실패: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"오브젝트 상호작용 실패: {str(e)}"
@@ -535,16 +559,27 @@ async def drop_item(request: ItemActionRequest):
 @router.get("/actions/{session_id}")
 async def get_available_actions(session_id: str):
     """사용 가능한 액션 조회"""
+    # UUID 형식 검증
+    try:
+        import uuid
+        uuid.UUID(session_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"잘못된 세션 ID 형식: {session_id}"
+        )
+    
     try:
         service = get_action_service()
         return await service.get_available_actions(session_id)
     except ValueError as e:
+        logger.error(f"액션 조회 실패 (ValueError): {str(e)}")
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
+            status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e)
         )
     except Exception as e:
-        logger.error(f"액션 조회 실패: {str(e)}")
+        logger.error(f"액션 조회 실패: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"액션 조회 실패: {str(e)}"

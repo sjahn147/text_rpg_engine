@@ -6,7 +6,7 @@ import React, { useState, useEffect } from 'react';
 import { MapCanvas } from './MapCanvas';
 import { EntityPlacementModal } from './EntityPlacementModal';
 import { mapHierarchyApi, locationsApi, cellsApi } from '../../services/api';
-import { MapMetadata, PinData, RoadData } from '../types';
+import { MapMetadata, PinData, RoadData } from '../../types';
 
 export type MapLevel = 'world' | 'region' | 'location' | 'cell';
 

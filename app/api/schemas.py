@@ -213,7 +213,7 @@ class LocationBase(BaseModel):
 
 class LocationCreate(LocationBase):
     """위치 생성 스키마"""
-    location_id: str
+    location_id: Optional[str] = Field(None, description="위치 ID (없으면 자동 생성)")
 
 
 class LocationUpdate(BaseModel):
@@ -264,7 +264,7 @@ class CellBase(BaseModel):
 
 class CellCreate(CellBase):
     """셀 생성 스키마"""
-    cell_id: str
+    cell_id: Optional[str] = Field(None, description="셀 ID (없으면 자동 생성)")
 
 
 class CellUpdate(BaseModel):
@@ -333,7 +333,7 @@ class EntityBase(BaseModel):
 
 class EntityCreate(EntityBase):
     """엔티티 생성 스키마"""
-    entity_id: str
+    entity_id: Optional[str] = Field(None, description="엔티티 ID (없으면 자동 생성)")
 
 
 class EntityUpdate(BaseModel):

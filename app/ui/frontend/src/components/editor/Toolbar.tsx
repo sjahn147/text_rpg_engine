@@ -2,7 +2,7 @@
  * 도구 모음 컴포넌트
  */
 import React from 'react';
-import { EditorTool } from '../types';
+import { EditorTool } from '../../types';
 
 interface ToolbarProps {
   currentTool: EditorTool;

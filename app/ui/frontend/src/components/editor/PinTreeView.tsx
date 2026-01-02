@@ -2,7 +2,7 @@
  * 핀 트리뷰 컴포넌트
  */
 import React, { useState } from 'react';
-import { PinData } from '../types';
+import { PinData } from '../../types';
 
 interface PinTreeViewProps {
   pins: PinData[];

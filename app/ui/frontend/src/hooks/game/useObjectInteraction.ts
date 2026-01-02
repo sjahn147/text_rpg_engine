@@ -32,6 +32,12 @@ export const useObjectInteraction = (callbacks?: UseObjectInteractionCallbacks) 
                   (object as any).runtime_object_id || 
                   (object as any).game_object_id || 
                   '';
+    
+    if (!objId) {
+      console.error('오브젝트 ID가 없습니다:', object);
+      setError('오브젝트 ID를 찾을 수 없습니다.');
+      return;
+    }
 
     try {
       setLoading(true);
@@ -89,6 +95,13 @@ export const useObjectInteraction = (callbacks?: UseObjectInteractionCallbacks) 
       }
 
       // 일반 오브젝트 상호작용
+      console.log('오브젝트 상호작용 요청:', {
+        sessionId: gameState.session_id,
+        objectId: objId,
+        actionId: actionId,
+        object: object
+      });
+      
       const response = await gameApi.interactWithObject(
         gameState.session_id,
         objId,

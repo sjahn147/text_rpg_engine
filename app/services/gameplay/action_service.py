@@ -1,8 +1,9 @@
 """
 액션 조회 서비스
 """
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 import json
+import uuid
 from app.core.game_session import GameSession
 from app.services.gameplay.base_service import BaseGameplayService
 from common.utils.logger import logger
@@ -10,6 +11,116 @@ from common.utils.logger import logger
 
 class ActionService(BaseGameplayService):
     """액션 조회 서비스"""
+    
+    def _can_transition_state(
+        self,
+        current_state: str,
+        target_state: str,
+        possible_states: List[str],
+        state_transitions: Optional[Dict[str, List[str]]] = None
+    ) -> bool:
+        """
+        상태 전이가 가능한지 확인
+        
+        Args:
+            current_state: 현재 상태
+            target_state: 목표 상태
+            possible_states: 가능한 상태 목록
+            state_transitions: 명시적 상태 전이 규칙 (선택사항)
+        
+        Returns:
+            bool: 전이 가능 여부
+        """
+        if not current_state or not target_state:
+            return False
+        
+        # 명시적 전이 규칙이 있으면 우선 사용
+        if state_transitions:
+            allowed_transitions = state_transitions.get(current_state, [])
+            return target_state in allowed_transitions
+        
+        # possible_states 기반 자동 전이 규칙
+        if current_state in possible_states and target_state in possible_states:
+            # 인접 상태로만 전이 가능 (순서 기반)
+            try:
+                current_idx = possible_states.index(current_state)
+                target_idx = possible_states.index(target_state)
+                # 인접 상태만 허용 (차이가 1 이하)
+                return abs(current_idx - target_idx) <= 1
+            except ValueError:
+                # 상태가 목록에 없으면 False
+                return False
+        
+        return False
+    
+    def _check_action_conditions(
+        self,
+        action_config: Dict[str, Any],
+        current_state: str,
+        possible_states: List[str]
+    ) -> bool:
+        """
+        액션 수행 가능 여부 확인
+        
+        Args:
+            action_config: 액션 설정
+            current_state: 현재 상태
+            possible_states: 가능한 상태 목록
+        
+        Returns:
+            bool: 액션 수행 가능 여부
+        """
+        can_perform = True
+        
+        # required_state 확인
+        required_state = action_config.get('required_state')
+        if required_state and current_state != required_state:
+            self.logger.debug(
+                f"액션 수행 불가: required_state={required_state}, current_state={current_state}"
+            )
+            can_perform = False
+        
+        # forbidden_states 확인
+        forbidden_states = action_config.get('forbidden_states', [])
+        if current_state in forbidden_states:
+            self.logger.debug(
+                f"액션 수행 불가: current_state={current_state} is in forbidden_states={forbidden_states}"
+            )
+            can_perform = False
+        
+        # 상태별 허용 액션 목록 확인
+        allowed_in_states = action_config.get('allowed_in_states', [])
+        if allowed_in_states and current_state not in allowed_in_states:
+            self.logger.debug(
+                f"액션 수행 불가: current_state={current_state} not in allowed_in_states={allowed_in_states}"
+            )
+            can_perform = False
+        
+        # 상태별 금지 액션 목록 확인
+        forbidden_in_states = action_config.get('forbidden_in_states', [])
+        if forbidden_in_states and current_state in forbidden_in_states:
+            self.logger.debug(
+                f"액션 수행 불가: current_state={current_state} is in forbidden_in_states={forbidden_in_states}"
+            )
+            can_perform = False
+        
+        # 상태 전이 규칙 확인
+        target_state = action_config.get('target_state')
+        if target_state and possible_states:
+            state_transitions = action_config.get('state_transitions')
+            can_transition = self._can_transition_state(
+                current_state=current_state,
+                target_state=target_state,
+                possible_states=possible_states,
+                state_transitions=state_transitions
+            )
+            if not can_transition:
+                self.logger.debug(
+                    f"액션 수행 불가: 상태 전이 불가능 (current_state={current_state}, target_state={target_state})"
+                )
+                can_perform = False
+        
+        return can_perform
     
     async def get_available_actions(self, session_id: str) -> List[Dict[str, Any]]:
         """
@@ -19,6 +130,12 @@ class ActionService(BaseGameplayService):
             List[Dict[str, Any]]: 액션 목록
         """
         try:
+            # UUID 형식 검증
+            try:
+                uuid.UUID(session_id)
+            except ValueError:
+                raise ValueError(f"잘못된 세션 ID 형식: {session_id}")
+            
             session = GameSession(session_id)
             player_entities = await session.get_player_entities()
             
@@ -28,21 +145,55 @@ class ActionService(BaseGameplayService):
             # current_position JSONB에서 runtime_cell_id 추출
             current_position = player_entities[0].get('current_position', {})
             if isinstance(current_position, str):
-                current_position = json.loads(current_position)
+                try:
+                    current_position = json.loads(current_position)
+                except json.JSONDecodeError:
+                    self.logger.error(f"current_position JSON 파싱 실패: {current_position}")
+                    current_position = {}
+            elif current_position is None:
+                current_position = {}
+            
             current_cell_id = current_position.get('runtime_cell_id')
             
             if not current_cell_id:
-                raise ValueError("현재 셀을 찾을 수 없습니다.")
+                # current_cell_id가 없으면 기본 관찰 액션만 반환
+                self.logger.warning(f"플레이어의 현재 셀을 찾을 수 없습니다. session_id: {session_id}, current_position: {current_position}")
+                # 최소한의 관찰 액션은 제공
+                return [{
+                    "action_id": "observe_room",
+                    "action_type": "observe",
+                    "text": "주변 관찰하기",
+                    "target_id": None,
+                    "target_name": None,
+                    "target_type": None,
+                    "description": "주변을 자세히 관찰합니다.",
+                }]
+            
+            # UUID 형식 검증
+            try:
+                uuid.UUID(str(current_cell_id))
+            except (ValueError, TypeError):
+                self.logger.error(f"잘못된 runtime_cell_id 형식: {current_cell_id}")
+                raise ValueError(f"현재 셀 ID 형식이 올바르지 않습니다: {current_cell_id}")
             
             # 현재 셀 정보 조회
-            cell_contents = await self.cell_manager.get_cell_contents(current_cell_id)
+            try:
+                cell_contents = await self.cell_manager.get_cell_contents(current_cell_id)
+            except Exception as e:
+                self.logger.error(f"셀 컨텐츠 조회 실패: {str(e)}, cell_id: {current_cell_id}")
+                raise ValueError(f"셀 정보를 조회할 수 없습니다: {str(e)}")
             
             actions = []
             
             # 연결된 셀로 이동 액션
             # 현재 셀의 game_cell_id를 통해 connected_cells 정보 조회
-            cell_data_result = await self.cell_manager.get_cell(current_cell_id)
-            if cell_data_result.success and cell_data_result.cell:
+            try:
+                cell_data_result = await self.cell_manager.get_cell(current_cell_id)
+            except Exception as e:
+                self.logger.error(f"셀 조회 실패: {str(e)}, cell_id: {current_cell_id}")
+                cell_data_result = None
+            
+            if cell_data_result and cell_data_result.success and cell_data_result.cell:
                 cell_properties = cell_data_result.cell.properties
                 connected_cells_info = cell_properties.get('connected_cells', [])
                 
@@ -60,29 +211,18 @@ class ActionService(BaseGameplayService):
                             runtime_target_cell_id = cell_ref['runtime_cell_id']
                             break
                     
-                    # 없으면 생성
+                    # 없으면 생성 (get_or_create_cell_reference는 runtime_cells를 먼저 생성하고 cell_references를 생성함)
                     if not runtime_target_cell_id:
-                        import uuid
-                        runtime_target_cell_id = str(uuid.uuid4())
-                        await self.reference_layer_repo.create_cell_reference({
-                            'runtime_cell_id': runtime_target_cell_id,
-                            'game_cell_id': target_game_cell_id,
-                            'session_id': session_id
-                        })
-                        # runtime_cells에도 추가
-                        pool = await self.db.pool
-                        async with pool.acquire() as conn:
-                            await conn.execute(
-                                """
-                                INSERT INTO runtime_data.runtime_cells
-                                (runtime_cell_id, game_cell_id, session_id, created_at)
-                                VALUES ($1, $2, $3, NOW())
-                                ON CONFLICT (runtime_cell_id) DO NOTHING
-                                """,
-                                runtime_target_cell_id,
-                                target_game_cell_id,
-                                session_id
+                        try:
+                            cell_ref = await self.reference_layer_repo.get_or_create_cell_reference(
+                                game_cell_id=target_game_cell_id,
+                                session_id=session_id
                             )
+                            runtime_target_cell_id = cell_ref.get('runtime_cell_id')
+                        except Exception as e:
+                            self.logger.error(f"연결된 셀 참조 생성 실패: {str(e)}, game_cell_id: {target_game_cell_id}")
+                            # 생성 실패 시 해당 셀로의 이동 액션을 건너뜀
+                            continue
                     
                     if runtime_target_cell_id:
                         actions.append({
@@ -294,25 +434,12 @@ class ActionService(BaseGameplayService):
                     if not isinstance(action_config, dict):
                         continue
                     
-                    # 액션 가능 여부 확인
-                    required_state = action_config.get('required_state')
-                    forbidden_states = action_config.get('forbidden_states', [])
-                    
-                    # 상태 조건 확인
-                    can_perform = True
-                    if required_state and current_state != required_state:
-                        can_perform = False
-                    if current_state in forbidden_states:
-                        can_perform = False
-                    
-                    # possible_states 기반 상태 전이 확인
-                    if possible_states and current_state:
-                        # 상태 전이 규칙 확인 (예: closed -> open만 가능)
-                        state_transitions = action_config.get('state_transitions', {})
-                        if state_transitions:
-                            # 현재 상태에서 이 액션으로 전이 가능한지 확인
-                            if current_state not in state_transitions:
-                                can_perform = False
+                    # 액션 가능 여부 확인 (강화된 검증 로직 사용)
+                    can_perform = self._check_action_conditions(
+                        action_config=action_config,
+                        current_state=current_state or '',
+                        possible_states=possible_states or []
+                    )
                     
                     if not can_perform:
                         continue
@@ -335,46 +462,128 @@ class ActionService(BaseGameplayService):
                     })
                 
                 # interaction_type 기반 레거시 지원 (interactions가 없는 경우)
+                # 상태 필터링 적용
                 if not interactions:
                     if interaction_type == 'openable':
-                        if current_state in ['closed', None, '']:
-                            object_actions.append({
-                                "action_id": f"open_object_{object_id}",
-                                "action_type": "open",
-                                "text": f"{object_name} 열기",
-                                "target_id": object_id,
-                                "target_name": object_name,
-                                "target_type": "object",
-                            })
+                        # 상태 전이 규칙: closed -> open, open -> closed
+                        if possible_states and current_state:
+                            # closed 상태에서만 open 가능
+                            if current_state in ['closed', None, '']:
+                                # possible_states에 'open'이 있고 전이 가능한지 확인
+                                if 'open' in possible_states:
+                                    can_open = self._can_transition_state(
+                                        current_state=current_state or 'closed',
+                                        target_state='open',
+                                        possible_states=possible_states
+                                    )
+                                    if can_open:
+                                        object_actions.append({
+                                            "action_id": f"open_object_{object_id}",
+                                            "action_type": "open",
+                                            "text": f"{object_name} 열기",
+                                            "target_id": object_id,
+                                            "target_name": object_name,
+                                            "target_type": "object",
+                                        })
+                            # open 상태에서만 close 가능
+                            else:
+                                # possible_states에 'closed'가 있고 전이 가능한지 확인
+                                if 'closed' in possible_states:
+                                    can_close = self._can_transition_state(
+                                        current_state=current_state,
+                                        target_state='closed',
+                                        possible_states=possible_states
+                                    )
+                                    if can_close:
+                                        object_actions.append({
+                                            "action_id": f"close_object_{object_id}",
+                                            "action_type": "close",
+                                            "text": f"{object_name} 닫기",
+                                            "target_id": object_id,
+                                            "target_name": object_name,
+                                            "target_type": "object",
+                                        })
                         else:
-                            object_actions.append({
-                                "action_id": f"close_object_{object_id}",
-                                "action_type": "close",
-                                "text": f"{object_name} 닫기",
-                                "target_id": object_id,
-                                "target_name": object_name,
-                                "target_type": "object",
-                            })
+                            # possible_states가 없으면 기존 로직 사용
+                            if current_state in ['closed', None, '']:
+                                object_actions.append({
+                                    "action_id": f"open_object_{object_id}",
+                                    "action_type": "open",
+                                    "text": f"{object_name} 열기",
+                                    "target_id": object_id,
+                                    "target_name": object_name,
+                                    "target_type": "object",
+                                })
+                            else:
+                                object_actions.append({
+                                    "action_id": f"close_object_{object_id}",
+                                    "action_type": "close",
+                                    "text": f"{object_name} 닫기",
+                                    "target_id": object_id,
+                                    "target_name": object_name,
+                                    "target_type": "object",
+                                })
                     elif interaction_type == 'lightable':
-                        if current_state in ['unlit', None, '']:
-                            object_actions.append({
-                                "action_id": f"light_object_{object_id}",
-                                "action_type": "light",
-                                "text": f"{object_name} 불 켜기",
-                                "target_id": object_id,
-                                "target_name": object_name,
-                                "target_type": "object",
-                            })
+                        # 상태 전이 규칙: unlit -> lit, lit -> unlit
+                        if possible_states and current_state:
+                            # unlit 상태에서만 light 가능
+                            if current_state in ['unlit', None, '']:
+                                # possible_states에 'lit'이 있고 전이 가능한지 확인
+                                if 'lit' in possible_states:
+                                    can_light = self._can_transition_state(
+                                        current_state=current_state or 'unlit',
+                                        target_state='lit',
+                                        possible_states=possible_states
+                                    )
+                                    if can_light:
+                                        object_actions.append({
+                                            "action_id": f"light_object_{object_id}",
+                                            "action_type": "light",
+                                            "text": f"{object_name} 불 켜기",
+                                            "target_id": object_id,
+                                            "target_name": object_name,
+                                            "target_type": "object",
+                                        })
+                            # lit 상태에서만 extinguish 가능
+                            else:
+                                # possible_states에 'unlit'이 있고 전이 가능한지 확인
+                                if 'unlit' in possible_states:
+                                    can_extinguish = self._can_transition_state(
+                                        current_state=current_state,
+                                        target_state='unlit',
+                                        possible_states=possible_states
+                                    )
+                                    if can_extinguish:
+                                        object_actions.append({
+                                            "action_id": f"extinguish_object_{object_id}",
+                                            "action_type": "extinguish",
+                                            "text": f"{object_name} 불 끄기",
+                                            "target_id": object_id,
+                                            "target_name": object_name,
+                                            "target_type": "object",
+                                        })
                         else:
-                            object_actions.append({
-                                "action_id": f"extinguish_object_{object_id}",
-                                "action_type": "extinguish",
-                                "text": f"{object_name} 불 끄기",
-                                "target_id": object_id,
-                                "target_name": object_name,
-                                "target_type": "object",
-                            })
+                            # possible_states가 없으면 기존 로직 사용
+                            if current_state in ['unlit', None, '']:
+                                object_actions.append({
+                                    "action_id": f"light_object_{object_id}",
+                                    "action_type": "light",
+                                    "text": f"{object_name} 불 켜기",
+                                    "target_id": object_id,
+                                    "target_name": object_name,
+                                    "target_type": "object",
+                                })
+                            else:
+                                object_actions.append({
+                                    "action_id": f"extinguish_object_{object_id}",
+                                    "action_type": "extinguish",
+                                    "text": f"{object_name} 불 끄기",
+                                    "target_id": object_id,
+                                    "target_name": object_name,
+                                    "target_type": "object",
+                                })
                     elif interaction_type in ['restable', 'rest']:
+                        # rest는 상태 필터링 없이 항상 가능 (상태 변경 없음)
                         object_actions.append({
                             "action_id": f"rest_object_{object_id}",
                             "action_type": "rest",
@@ -384,6 +593,7 @@ class ActionService(BaseGameplayService):
                             "target_type": "object",
                         })
                     elif interaction_type in ['sitable', 'sit']:
+                        # sit은 상태 필터링 없이 항상 가능 (상태 변경 없음)
                         object_actions.append({
                             "action_id": f"sit_object_{object_id}",
                             "action_type": "sit",
@@ -411,7 +621,10 @@ class ActionService(BaseGameplayService):
             
             return actions
             
-        except Exception as e:
-            self.logger.error(f"액션 조회 실패: {str(e)}")
+        except ValueError as e:
+            self.logger.error(f"액션 조회 실패 (ValueError): {str(e)}")
             raise
+        except Exception as e:
+            self.logger.error(f"액션 조회 실패: {str(e)}", exc_info=True)
+            raise ValueError(f"액션 조회 중 오류가 발생했습니다: {str(e)}")
 

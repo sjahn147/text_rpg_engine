@@ -207,8 +207,8 @@ export const CellEntityManager: React.FC<CellEntityManagerProps> = ({
                 type="number"
                 value={gridSize}
                 onChange={(e) => setGridSize(Number(e.target.value))}
-                min="10"
-                max="50"
+                min={10}
+                max={50}
                 style={{ width: '60px', marginLeft: '5px' }}
               />
             </label>
@@ -216,8 +216,8 @@ export const CellEntityManager: React.FC<CellEntityManagerProps> = ({
               줌:
               <input
                 type="range"
-                min="0.5"
-                max="2"
+                min={0.5}
+                max={2}
                 step="0.1"
                 value={zoom}
                 onChange={(e) => setZoom(Number(e.target.value))}

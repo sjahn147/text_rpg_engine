@@ -105,7 +105,41 @@ export const GameView: React.FC<GameViewProps> = ({ onNavigate }) => {
 
       // 현재 셀 정보 로드
       const cell = await gameApi.getCurrentCell(response.game_state.session_id);
+      console.log('[GameView] Loaded cell:', {
+        cell_name: cell.cell_name,
+        objectsCount: cell.objects?.length || 0,
+        entitiesCount: cell.entities?.length || 0,
+        objects: cell.objects?.map(obj => ({
+          object_id: obj.object_id,
+          runtime_object_id: (obj as any).runtime_object_id,
+          game_object_id: (obj as any).game_object_id,
+          object_name: obj.object_name
+        })) || []
+      });
       setCurrentCell(cell);
+
+      // 초기 오브젝트 및 엔티티 자동 발견
+      if (cell.objects && cell.objects.length > 0) {
+        const initialObjectIds = cell.objects.map(obj => 
+          obj.object_id || (obj as any).runtime_object_id || (obj as any).game_object_id
+        ).filter(id => id);
+        if (initialObjectIds.length > 0) {
+          console.log('[GameView] Auto-discovering objects on load:', initialObjectIds);
+          setDiscoveredObjects(new Set(initialObjectIds));
+        }
+      }
+      if (cell.entities && cell.entities.length > 0) {
+        const initialEntityIds = cell.entities
+          .filter(entity => entity.entity_type !== 'player')
+          .map(entity => 
+            entity.runtime_entity_id || entity.entity_id || ''
+          )
+          .filter(id => id);
+        if (initialEntityIds.length > 0) {
+          console.log('[GameView] Auto-discovering entities on load:', initialEntityIds);
+          setDiscoveredObjects(prev => new Set([...prev, ...initialEntityIds]));
+        }
+      }
 
       // 초기 메시지 설정
       setCurrentMessage({
@@ -222,40 +256,57 @@ export const GameView: React.FC<GameViewProps> = ({ onNavigate }) => {
           
         case 'observe':
           // 주변 관찰하기 - 모든 오브젝트와 NPC 발견
-          if (currentCell) {
-            const discoveredIds: string[] = [];
-            
-            // 모든 오브젝트 발견 처리
-            if (currentCell.objects) {
-              const allObjectIds = currentCell.objects.map(obj => 
-                obj.object_id || (obj as any).runtime_object_id || (obj as any).game_object_id
-              ).filter(id => id);
-              discoveredIds.push(...allObjectIds);
+          try {
+            if (currentCell) {
+              const discoveredIds: string[] = [];
+              
+              // 모든 오브젝트 발견 처리
+              if (currentCell.objects) {
+                const allObjectIds = currentCell.objects.map(obj => 
+                  obj.object_id || (obj as any).runtime_object_id || (obj as any).game_object_id
+                ).filter(id => id);
+                discoveredIds.push(...allObjectIds);
+              }
+              
+              // 모든 NPC 발견 처리 (플레이어 제외)
+              if (currentCell.entities) {
+                const allEntityIds = currentCell.entities
+                  .filter(entity => entity.entity_type !== 'player')
+                  .map(entity => 
+                    entity.runtime_entity_id || entity.entity_id || ''
+                  )
+                  .filter(id => id);
+                discoveredIds.push(...allEntityIds);
+              }
+              
+              setDiscoveredObjects(new Set([...discoveredObjects, ...discoveredIds]));
+              
+              // 메시지 표시
+              setCurrentMessage({
+                text: action.description || '주변을 자세히 관찰합니다.',
+                message_type: 'narration',
+                timestamp: Date.now(),
+              });
+              
+              // 새로운 액션 조회 (개별 오브젝트 및 NPC 액션 포함)
+              try {
+                const actions = await gameApi.getAvailableActions(gameState.session_id);
+                setAvailableActions(actions);
+              } catch (error) {
+                console.error('액션 조회 실패:', error);
+                setError('액션을 불러오는데 실패했습니다. 페이지를 새로고침해주세요.');
+              }
+            } else {
+              // currentCell이 없어도 관찰 메시지는 표시
+              setCurrentMessage({
+                text: action.description || '주변을 자세히 관찰합니다.',
+                message_type: 'narration',
+                timestamp: Date.now(),
+              });
             }
-            
-            // 모든 NPC 발견 처리 (플레이어 제외)
-            if (currentCell.entities) {
-              const allEntityIds = currentCell.entities
-                .filter(entity => entity.entity_type !== 'player')
-                .map(entity => 
-                  entity.runtime_entity_id || entity.entity_id || ''
-                )
-                .filter(id => id);
-              discoveredIds.push(...allEntityIds);
-            }
-            
-            setDiscoveredObjects(new Set([...discoveredObjects, ...discoveredIds]));
-            
-            // 메시지 표시
-            setCurrentMessage({
-              text: action.description || '주변을 자세히 관찰합니다.',
-              message_type: 'narration',
-              timestamp: Date.now(),
-            });
-            
-            // 새로운 액션 조회 (개별 오브젝트 및 NPC 액션 포함)
-            const actions = await gameApi.getAvailableActions(gameState.session_id);
-            setAvailableActions(actions);
+          } catch (error) {
+            console.error('주변 관찰하기 실패:', error);
+            setError('주변 관찰하기에 실패했습니다.');
           }
           break;
           
@@ -474,9 +525,9 @@ export const GameView: React.FC<GameViewProps> = ({ onNavigate }) => {
   
   // 캐릭터 정보 (셀의 엔티티에서 가져오기, 추후 구현)
   const characters = currentCell?.entities
-    ?.filter((e) => e.entity_type === 'npc')
+    ?.filter((e) => e.entity_type === 'npc' && e.entity_id)
     .map((e) => ({
-      character_id: e.entity_id,
+      character_id: e.entity_id!,
       character_name: e.entity_name,
       position: 'center' as const,
       visible: true,
@@ -530,7 +581,11 @@ export const GameView: React.FC<GameViewProps> = ({ onNavigate }) => {
         <InteractionLayer
           objects={(currentCell.objects || []).filter(obj => {
             const objId = obj.object_id || (obj as any).runtime_object_id || (obj as any).game_object_id;
-            return objId && discoveredObjects.has(objId);
+            const isDiscovered = objId && discoveredObjects.has(objId);
+            if (!isDiscovered && objId) {
+              console.log('[GameView] Object not discovered yet:', { objId, object_name: obj.object_name, discoveredObjects: Array.from(discoveredObjects) });
+            }
+            return isDiscovered;
           })}
           entities={currentCell.entities || []}
           onObjectClick={(object, event) => {

@@ -206,16 +206,34 @@ class ReferenceLayerRepository:
             elif 'cell_type' in game_cell:
                 cell_type = game_cell['cell_type']
         
-        runtime_cell_id = str(uuid.uuid4())
-        await self.create_cell_reference({
-            'runtime_cell_id': runtime_cell_id,
-            'game_cell_id': game_cell_id,
-            'session_id': session_id,
-            'cell_type': cell_type
-        })
+        runtime_cell_id = uuid.uuid4()
+        
+        # 트랜잭션 내에서 runtime_cells 먼저 생성, 그 다음 cell_references 생성
+        pool = await self.db.pool
+        async with pool.acquire() as conn:
+            async with conn.transaction():
+                # 1. runtime_cells에 먼저 생성 (FK 제약조건을 위해 필수)
+                await conn.execute(
+                    """
+                    INSERT INTO runtime_data.runtime_cells (
+                        runtime_cell_id, game_cell_id, session_id, status, cell_type, created_at
+                    ) VALUES ($1, $2, $3, $4, $5, NOW())
+                    """,
+                    runtime_cell_id, game_cell_id, session_id, "active", cell_type
+                )
+                
+                # 2. 참조 레이어에 등록
+                await conn.execute(
+                    """
+                    INSERT INTO reference_layer.cell_references
+                    (runtime_cell_id, game_cell_id, session_id, cell_type)
+                    VALUES ($1, $2, $3, $4)
+                    """,
+                    runtime_cell_id, game_cell_id, session_id, cell_type
+                )
         
         # 생성된 참조 반환
-        return await self.get_cell_reference(runtime_cell_id)
+        return await self.get_cell_reference(str(runtime_cell_id))
 
     async def get_cell_references_by_session(self, session_id: str) -> List[Dict[str, Any]]:
         """세션 ID로 모든 셀 참조를 조회합니다."""

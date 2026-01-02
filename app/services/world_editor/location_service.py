@@ -9,6 +9,7 @@ from app.api.schemas import (
 )
 from common.utils.logger import logger
 from common.utils.jsonb_handler import serialize_jsonb_data, parse_jsonb_data
+from app.common.decorators.error_handler import handle_service_errors
 
 
 class LocationService:
@@ -156,6 +157,7 @@ class LocationService:
             logger.error(f"지역별 위치 조회 실패: {e}")
             raise
     
+    @handle_service_errors
     async def create_location(self, location_data: LocationCreate) -> LocationResponse:
         """새 위치 생성"""
         try:
@@ -352,6 +354,7 @@ class LocationService:
             logger.error(f"해결된 위치 조회 실패: {e}")
             raise
     
+    @handle_service_errors
     async def delete_location(self, location_id: str) -> bool:
         """위치 삭제"""
         try:

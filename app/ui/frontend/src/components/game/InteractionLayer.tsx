@@ -76,12 +76,14 @@ export const InteractionLayer: React.FC<InteractionLayerProps> = ({
       }}
     >
       {/* 오브젝트 클릭 영역 - 원형 아이콘 */}
-      {objects.map((obj, index) => (
+      {objects
+        .filter((obj) => obj.position)
+        .map((obj, index) => (
         <motion.div
           key={obj.object_id}
           className="absolute pointer-events-auto cursor-pointer"
           style={{
-            ...getPositionStyle(obj.position, index),
+            ...getPositionStyle(obj.position!, index),
             width: '80px',
             height: '80px',
             display: 'flex',
@@ -101,7 +103,7 @@ export const InteractionLayer: React.FC<InteractionLayerProps> = ({
             }}
             whileHover={{
               scale: 1.2,
-              background: 'rgba(255, 255, 255, 0.6)',
+              backgroundColor: 'rgba(255, 255, 255, 0.6)',
               borderColor: 'rgba(255, 255, 255, 0.9)',
             }}
             whileTap={{ scale: 0.9 }}
@@ -115,7 +117,6 @@ export const InteractionLayer: React.FC<InteractionLayerProps> = ({
               fontSize: '24px',
               color: 'rgba(0, 0, 0, 0.8)',
               cursor: 'pointer',
-              transition: 'all 0.3s ease',
             }}
           >
             📦
@@ -124,12 +125,14 @@ export const InteractionLayer: React.FC<InteractionLayerProps> = ({
       ))}
 
       {/* 엔티티 클릭 영역 */}
-      {entities.map((entity, index) => (
+      {entities
+        .filter((entity) => entity.position)
+        .map((entity, index) => (
         <motion.div
           key={entity.entity_id}
           className="absolute pointer-events-auto cursor-pointer"
           style={{
-            ...getPositionStyle(entity.position, objects.length + index),
+            ...getPositionStyle(entity.position!, objects.length + index),
             width: '80px',
             height: '80px',
             display: 'flex',
@@ -149,7 +152,7 @@ export const InteractionLayer: React.FC<InteractionLayerProps> = ({
             }}
             whileHover={{
               scale: 1.2,
-              background: 'rgba(255, 255, 255, 0.7)',
+              backgroundColor: 'rgba(255, 255, 255, 0.7)',
               borderColor: 'rgba(255, 255, 255, 1)',
             }}
             whileTap={{ scale: 0.9 }}
@@ -163,7 +166,6 @@ export const InteractionLayer: React.FC<InteractionLayerProps> = ({
               fontSize: '24px',
               color: 'rgba(0, 0, 0, 0.9)',
               cursor: 'pointer',
-              transition: 'all 0.3s ease',
             }}
           >
             👤

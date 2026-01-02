@@ -146,10 +146,11 @@ class CellManager:
             
             template = template_result[0]
             
-            # 런타임 셀 인스턴스 ID 생성 (UUID)
-            runtime_cell_id = str(uuid.uuid4())
+            # 런타임 셀 인스턴스 ID 생성 (UUID 객체)
+            runtime_cell_id = uuid.uuid4()
             
             # 먼저 세션 생성 (존재하지 않는 경우)
+            session_id_str = str(session_id)
             await self.db.execute_query("""
                 INSERT INTO runtime_data.active_sessions 
                 (session_id, session_name, player_runtime_entity_id, session_state, created_at, updated_at)
@@ -157,7 +158,7 @@ class CellManager:
                 ON CONFLICT (session_id) DO NOTHING
             """, 
             session_id,
-            f"Test Session {session_id[:8]}",
+            f"Test Session {session_id_str[:8]}",
             None,
             "active"
             )
@@ -185,8 +186,9 @@ class CellManager:
             cell_properties = parse_jsonb_data(template["cell_properties"])
             
             # 셀 데이터 생성 (정적 템플릿 정보 사용)
+            from app.common.utils.uuid_helper import normalize_uuid
             cell_data = CellData(
-                cell_id=runtime_cell_id,
+                cell_id=normalize_uuid(runtime_cell_id),  # UUID 헬퍼 함수로 문자열로 정규화
                 name=template["cell_name"],
                 cell_type=CellType.INDOOR,  # 기본값
                 location_id=template["location_id"],
@@ -217,6 +219,8 @@ class CellManager:
         
         Args:
             cell_id: 셀 ID
+                - UUID인 경우: runtime_cell_id (reference_layer를 통해 game_cell_id 변환)
+                - str인 경우: game_cell_id (VARCHAR, game_data.world_cells 직접 조회)
             
         Returns:
             CellResult: 조회 결과
@@ -224,19 +228,40 @@ class CellManager:
         try:
             # 캐시에서 먼저 확인
             async with self._cache_lock:
-                if cell_id in self._cell_cache:
-                    cell = self._cell_cache[cell_id]
+                cache_key = str(cell_id)
+                if cache_key in self._cell_cache:
+                    cell = self._cell_cache[cache_key]
                     return CellResult.success_result(cell, message="캐시에서 조회")
             
             # 데이터베이스에서 조회
-            cell_data = await self._load_cell_from_db(cell_id)
+            # 원칙: UUID는 runtime_cell_id → reference_layer → game_cell_id (VARCHAR)
+            # UUID 객체 또는 UUID 형식 문자열인지 확인
+            is_uuid = isinstance(cell_id, UUID)
+            if not is_uuid and isinstance(cell_id, str):
+                # UUID 형식 문자열인지 확인 (예: "550e8400-e29b-41d4-a716-446655440000")
+                try:
+                    uuid.UUID(cell_id)
+                    is_uuid = True
+                except (ValueError, AttributeError):
+                    is_uuid = False
+            
+            if is_uuid:
+                # runtime_cell_id를 game_cell_id로 변환
+                runtime_uuid = cell_id if isinstance(cell_id, UUID) else uuid.UUID(cell_id)
+                game_cell_id = await self._get_game_cell_id_from_runtime_id(runtime_uuid)
+                if not game_cell_id:
+                    return CellResult.error_result(f"런타임 셀 '{cell_id}'에 해당하는 game_cell_id를 찾을 수 없습니다.")
+                cell_data = await self._load_cell_from_db(game_cell_id)
+            else:
+                # str인 경우 game_cell_id로 간주 (game_data.world_cells 직접 조회)
+                cell_data = await self._load_cell_from_db(cell_id)
             
             if not cell_data:
                 return CellResult.error_result(f"셀 '{cell_id}'를 찾을 수 없습니다.")
             
             # 캐시에 추가
             async with self._cache_lock:
-                self._cell_cache[cell_id] = cell_data
+                self._cell_cache[str(cell_id)] = cell_data
             
             return CellResult.success_result(cell_data, message="데이터베이스에서 조회")
             
@@ -355,7 +380,7 @@ class CellManager:
             # 플레이어 위치 SSOT = entity_states.current_position
             await self.add_entity_to_cell(player_id, cell_id)
             # 셀 점유 테이블은 조회 편의를 위한 파생 데이터로 유지
-            await self._add_player_to_cell(cell_id, player_id)
+            await self._add_player_to_cell(cell_id, player_id, conn=conn)
             
             return CellResult.success_result(
                 cell_result.cell,
@@ -389,7 +414,7 @@ class CellManager:
             # 플레이어 위치 SSOT = entity_states.current_position
             await self.remove_entity_from_cell(player_id, cell_id)
             # 셀 점유 파생 데이터 정리
-            await self._remove_player_from_cell(cell_id, player_id)
+            await self._remove_player_from_cell(cell_id, player_id, conn=conn)
             
             return CellResult.success_result(
                 cell_result.cell,
@@ -537,8 +562,37 @@ class CellManager:
             raise
     
     
-    async def _load_cell_from_db(self, cell_id: Union[str, UUID]) -> Optional[CellData]:
-        """데이터베이스에서 셀 로드"""
+    async def _get_game_cell_id_from_runtime_id(self, runtime_cell_id: UUID) -> Optional[str]:
+        """
+        runtime_cell_id (UUID)를 game_cell_id (VARCHAR)로 변환
+        
+        원칙: reference_layer를 통해 변환
+        """
+        try:
+            pool = await self.db.pool
+            async with pool.acquire() as conn:
+                row = await conn.fetchrow("""
+                    SELECT game_cell_id
+                    FROM reference_layer.cell_references
+                    WHERE runtime_cell_id = $1
+                """, runtime_cell_id)
+                
+                if row:
+                    return row['game_cell_id']
+                return None
+        except Exception as e:
+            self.logger.error(f"Failed to get game_cell_id from runtime_cell_id: {str(e)}")
+            return None
+    
+    async def _load_cell_from_db(self, game_cell_id: str) -> Optional[CellData]:
+        """
+        데이터베이스에서 셀 로드
+        
+        Args:
+            game_cell_id: game_cell_id (VARCHAR, game_data.world_cells의 cell_id)
+        
+        원칙: game_data 레이어는 VARCHAR(50) 사용
+        """
         try:
             pool = await self.db.pool
             async with pool.acquire() as conn:
@@ -546,7 +600,7 @@ class CellManager:
                     SELECT c.cell_id, c.cell_name, c.cell_description, c.location_id, c.cell_properties, c.matrix_width, c.matrix_height
                     FROM game_data.world_cells c
                     WHERE c.cell_id = $1
-                """, cell_id)
+                """, game_cell_id)
                 
                 if not row:
                     return None
@@ -572,31 +626,85 @@ class CellManager:
             self.logger.error(f"Failed to load cell from database: {str(e)}")
             return None
     
-    async def _load_cell_content_from_db(self, cell_id: str) -> CellContent:
-        """데이터베이스에서 셀 컨텐츠 로드"""
+    async def _load_cell_content_from_db(self, cell_id: Union[str, UUID]) -> CellContent:
+        """
+        데이터베이스에서 셀 컨텐츠 로드
+        
+        Args:
+            cell_id: runtime_cell_id (UUID) 또는 game_cell_id (VARCHAR)
+        
+        원칙: UUID인 경우 reference_layer를 통해 game_cell_id 변환
+        """
         try:
             pool = await self.db.pool
             async with pool.acquire() as conn:
-                # 먼저 runtime_cell_id로 game_cell_id 찾기
-                cell_ref = await conn.fetchrow("""
-                    SELECT game_cell_id, session_id
-                    FROM reference_layer.cell_references
-                    WHERE runtime_cell_id = $1
-                """, cell_id)
-                
-                if not cell_ref:
-                    # cell_references에 없으면 runtime_cells에서 찾기
+                # UUID인 경우 runtime_cell_id로 간주하고 reference_layer에서 game_cell_id 찾기
+                if isinstance(cell_id, UUID):
                     cell_ref = await conn.fetchrow("""
                         SELECT game_cell_id, session_id
-                        FROM runtime_data.runtime_cells
+                        FROM reference_layer.cell_references
                         WHERE runtime_cell_id = $1
                     """, cell_id)
+                else:
+                    # str인 경우 UUID 형식인지 확인
+                    # UUID 형식이면 runtime_cell_id로 간주
+                    try:
+                        cell_uuid = UUID(str(cell_id))
+                        # UUID 형식이면 runtime_cell_id로 처리
+                        cell_ref = await conn.fetchrow("""
+                            SELECT game_cell_id, session_id
+                            FROM reference_layer.cell_references
+                            WHERE runtime_cell_id = $1
+                        """, cell_uuid)
+                        if not cell_ref:
+                            # reference_layer에 없으면 runtime_cells에서 찾기
+                            cell_ref = await conn.fetchrow("""
+                                SELECT game_cell_id, session_id
+                                FROM runtime_data.runtime_cells
+                                WHERE runtime_cell_id = $1
+                            """, cell_uuid)
+                    except (ValueError, TypeError):
+                        # UUID 형식이 아니면 game_cell_id로 간주
+                        cell_ref = await conn.fetchrow("""
+                            SELECT game_cell_id, session_id
+                            FROM reference_layer.cell_references
+                            WHERE game_cell_id = $1
+                            LIMIT 1
+                        """, cell_id)
+                
+                if not cell_ref:
+                    # cell_references에 없으면 runtime_cells에서 찾기 (UUID인 경우)
+                    if isinstance(cell_id, UUID):
+                        cell_ref = await conn.fetchrow("""
+                            SELECT game_cell_id, session_id
+                            FROM runtime_data.runtime_cells
+                            WHERE runtime_cell_id = $1
+                        """, cell_id)
+                    else:
+                        # str이고 UUID 형식인지 다시 확인
+                        try:
+                            cell_uuid = UUID(str(cell_id))
+                            cell_ref = await conn.fetchrow("""
+                                SELECT game_cell_id, session_id
+                                FROM runtime_data.runtime_cells
+                                WHERE runtime_cell_id = $1
+                            """, cell_uuid)
+                        except (ValueError, TypeError):
+                            pass  # game_cell_id로 처리했지만 찾지 못함
                 
                 game_cell_id = cell_ref['game_cell_id'] if cell_ref else None
                 session_id = cell_ref['session_id'] if cell_ref else None
                 
+                # 디버그 로깅
+                self.logger.debug(f"셀 컨텐츠 로드: cell_id={cell_id}, game_cell_id={game_cell_id}, session_id={session_id}")
+                if not game_cell_id:
+                    self.logger.warning(f"game_cell_id를 찾을 수 없음: cell_id={cell_id}, cell_ref={cell_ref}")
+                if not session_id:
+                    self.logger.warning(f"session_id를 찾을 수 없음: cell_id={cell_id}, cell_ref={cell_ref}")
+                
                 # 셀 내 엔티티 조회 (3-Layer 구조 사용)
                 # current_position JSONB에서 runtime_cell_id 추출
+                # 원칙: UUID를 문자열로 변환하여 비교
                 entity_rows = await conn.fetch("""
                     SELECT 
                         re.runtime_entity_id,
@@ -609,13 +717,15 @@ class CellManager:
                     FROM reference_layer.entity_references re
                     JOIN game_data.entities ge ON re.game_entity_id = ge.entity_id
                     LEFT JOIN runtime_data.entity_states es ON re.runtime_entity_id = es.runtime_entity_id
-                    WHERE es.current_position->>'runtime_cell_id' = $1
-                """, cell_id)
+                    WHERE es.current_position->>'runtime_cell_id' = $1::text
+                """, str(cell_id))
+                
+                self.logger.debug(f"엔티티 조회 결과: {len(entity_rows)}개")
                 
                 # 셀 내 오브젝트 조회
                 # 레퍼런스 레이어를 통해 game_object_id → runtime_object_id 변환
                 object_rows = []
-                if game_cell_id:
+                if game_cell_id and session_id:
                     # 1. game_data.world_objects에서 default_cell_id가 현재 셀인 오브젝트 찾기
                     game_objects = await conn.fetch("""
                         SELECT 
@@ -629,6 +739,8 @@ class CellManager:
                         FROM game_data.world_objects wo
                         WHERE wo.default_cell_id = $1
                     """, game_cell_id)
+                    
+                    self.logger.debug(f"게임 데이터에서 오브젝트 조회: game_cell_id={game_cell_id}, 오브젝트 수={len(game_objects)}")
                     
                     # 2. 각 오브젝트에 대해 레퍼런스 레이어에서 runtime_object_id 조회 또는 생성
                     for game_obj in game_objects:
@@ -646,12 +758,24 @@ class CellManager:
                         
                         if object_ref:
                             # 레퍼런스 레이어에 있으면 사용
-                            runtime_object_id = str(object_ref['runtime_object_id'])
+                            runtime_object_id = object_ref['runtime_object_id']
                         else:
                             # 레퍼런스 레이어에 없으면 새로 생성하고 등록
-                            runtime_object_id = str(uuid.uuid4())
+                            runtime_object_id = uuid.uuid4()
                             
-                            # object_references에 등록
+                            # Foreign Key 제약조건을 위해 runtime_objects를 먼저 생성
+                            await conn.execute(
+                                """
+                                INSERT INTO runtime_data.runtime_objects 
+                                (runtime_object_id, game_object_id, session_id)
+                                VALUES ($1, $2, $3)
+                                """,
+                                runtime_object_id,
+                                game_object_id,
+                                session_id
+                            )
+                            
+                            # 그 다음 object_references에 등록
                             await conn.execute(
                                 """
                                 INSERT INTO reference_layer.object_references 
@@ -663,17 +787,46 @@ class CellManager:
                                 session_id,
                                 game_obj['object_type']
                             )
-                            
-                            # runtime_objects에도 생성
+                        
+                        # object_states 생성 또는 업데이트 (current_position 포함)
+                        # object_ref가 이미 있어도 object_states가 없을 수 있으므로 항상 확인
+                        import json
+                        from app.common.utils.uuid_helper import normalize_uuid
+                        
+                        default_pos = parse_jsonb_data(game_obj.get('default_position', {}))
+                        current_position = {
+                            **(default_pos if default_pos else {}),
+                            'runtime_cell_id': normalize_uuid(cell_id)  # JSONB 저장용 문자열로 정규화
+                        }
+                        
+                        # object_states가 있는지 확인
+                        existing_state = await conn.fetchrow("""
+                            SELECT runtime_object_id FROM runtime_data.object_states
+                            WHERE runtime_object_id = $1
+                        """, runtime_object_id)
+                        
+                        if not existing_state:
+                            # object_states가 없으면 생성
                             await conn.execute(
                                 """
-                                INSERT INTO runtime_data.runtime_objects 
-                                (runtime_object_id, game_object_id, session_id)
+                                INSERT INTO runtime_data.object_states 
+                                (runtime_object_id, current_state, current_position)
                                 VALUES ($1, $2, $3)
                                 """,
                                 runtime_object_id,
-                                game_object_id,
-                                session_id
+                                json.dumps({}),  # 기본 상태
+                                json.dumps(current_position)
+                            )
+                        else:
+                            # object_states가 있으면 current_position 업데이트
+                            await conn.execute(
+                                """
+                                UPDATE runtime_data.object_states
+                                SET current_position = $1
+                                WHERE runtime_object_id = $2
+                                """,
+                                json.dumps(current_position),
+                                runtime_object_id
                             )
                         
                         # object_rows에 추가
@@ -687,6 +840,14 @@ class CellManager:
                             'default_position': game_obj['default_position'],
                             'properties': game_obj['properties']
                         })
+                        self.logger.debug(f"오브젝트 추가: {game_obj['object_name']} (game_object_id={game_object_id}, runtime_object_id={runtime_object_id})")
+                else:
+                    if not game_cell_id:
+                        self.logger.warning(f"game_cell_id가 없어서 오브젝트를 조회하지 않음: cell_id={cell_id}")
+                    if not session_id:
+                        self.logger.warning(f"session_id가 없어서 오브젝트를 조회하지 않음: cell_id={cell_id}")
+                
+                self.logger.debug(f"오브젝트 조회 결과: {len(object_rows)}개")
                 
                 # 셀 내 이벤트 조회 (현재는 빈 리스트)
                 event_rows = []
@@ -718,7 +879,7 @@ class CellManager:
                 for row in object_rows:
                     position_data = parse_jsonb_data(row.get('default_position', {}))
                     properties = parse_jsonb_data(row.get('properties', {}))
-                    runtime_object_id = str(row['runtime_object_id'])
+                    runtime_object_id = row['runtime_object_id']
                     
                     # 런타임 상태에서 contents 확인 및 병합
                     runtime_state = await conn.fetchrow(
@@ -749,8 +910,12 @@ class CellManager:
                             properties['contents'] = state_dict['contents']
                     
                     # runtime_object_id는 이미 레퍼런스 레이어를 통해 확보됨
+                    # UUID 헬퍼 함수로 문자열로 정규화 (JSONB와의 호환성, 프론트엔드 호환성)
+                    from app.common.utils.uuid_helper import normalize_uuid
+                    runtime_object_id_str = normalize_uuid(runtime_object_id)
                     objects.append({
-                        'runtime_object_id': runtime_object_id,
+                        'object_id': runtime_object_id_str,  # 프론트엔드 호환성을 위해 object_id 추가
+                        'runtime_object_id': runtime_object_id_str,  # 문자열로 정규화
                         'game_object_id': row['game_object_id'],
                         'object_name': row['object_name'],
                         'object_type': row['object_type'],
@@ -877,49 +1042,61 @@ class CellManager:
             # 오류 시 기본값 반환
             return CellStatus.ACTIVE, CellType.INDOOR
     
-    async def _add_player_to_cell(self, runtime_cell_id: Union[str, UUID], runtime_entity_id: Union[str, UUID]) -> None:
-        """플레이어를 셀에 추가"""
+    async def _add_player_to_cell(self, runtime_cell_id: Union[str, UUID], runtime_entity_id: Union[str, UUID], conn=None) -> None:
+        """
+        플레이어를 셀에 추가 (SSOT: entity_states.current_position 사용)
+        
+        주의: cell_occupants는 트리거에 의해 자동 동기화됩니다.
+        직접 INSERT/DELETE를 사용하지 마세요.
+        """
         try:
             pool = await self.db.pool
             async with pool.acquire() as conn:
-                # 플레이어를 셀에 추가하는 로직
+                # SSOT: entity_states.current_position 업데이트
+                # cell_occupants는 트리거에 의해 자동 동기화됨
                 await conn.execute("""
-                    INSERT INTO runtime_data.cell_occupants 
-                    (runtime_cell_id, runtime_entity_id, entity_type, position, entered_at)
-                    VALUES ($1, $2, $3, $4, $5)
-                    ON CONFLICT (runtime_cell_id, runtime_entity_id) 
-                    DO UPDATE SET 
-                        position = EXCLUDED.position,
-                        entered_at = EXCLUDED.entered_at
-                """, 
-                runtime_cell_id, 
-                runtime_entity_id, 
-                "player", 
-                json.dumps({"x": 0, "y": 0, "z": 0}), 
-                datetime.now()
-                )
+                    UPDATE runtime_data.entity_states
+                    SET current_position = jsonb_set(
+                        COALESCE(current_position, '{}'::jsonb),
+                        '{runtime_cell_id}',
+                        to_jsonb($1::uuid::text)
+                    ),
+                    updated_at = NOW()
+                    WHERE runtime_entity_id = $2
+                """, runtime_cell_id, runtime_entity_id)
                 
-                self.logger.info(f"Player {runtime_entity_id} added to cell {runtime_cell_id}")
+                self.logger.info(f"Player {runtime_entity_id} added to cell {runtime_cell_id} (SSOT: entity_states.current_position)")
                 
         except Exception as e:
             self.logger.error(f"Failed to add player to cell: {str(e)}")
             raise
     
-    async def _remove_player_from_cell(self, runtime_cell_id: Union[str, UUID], runtime_entity_id: Union[str, UUID]) -> None:
-        """플레이어를 셀에서 제거"""
+    async def _remove_player_from_cell(self, runtime_cell_id: Union[str, UUID], runtime_entity_id: Union[str, UUID], conn=None) -> None:
+        """
+        플레이어를 셀에서 제거 (SSOT: entity_states.current_position 사용)
+        
+        주의: cell_occupants는 트리거에 의해 자동 동기화됩니다.
+        직접 INSERT/DELETE를 사용하지 마세요.
+        """
         try:
-            pool = await self.db.pool
-            async with pool.acquire() as conn:
-                # 플레이어를 셀에서 제거하는 로직
-                await conn.execute("""
-                    DELETE FROM runtime_data.cell_occupants 
-                    WHERE runtime_cell_id = $1 AND runtime_entity_id = $2
-                """, 
-                runtime_cell_id, 
-                runtime_entity_id
-                )
-                
-                self.logger.info(f"Player {runtime_entity_id} removed from cell {runtime_cell_id}")
+            # conn이 제공된 경우 사용, 없으면 새로 생성
+            if conn is None:
+                pool = await self.db.pool
+                async with pool.acquire() as new_conn:
+                    async with new_conn.transaction():
+                        await self._remove_player_from_cell(runtime_cell_id, runtime_entity_id, conn=new_conn)
+                return
+            
+            # SSOT: entity_states.current_position에서 runtime_cell_id 제거
+            # cell_occupants는 트리거에 의해 자동 동기화됨
+            await conn.execute("""
+                UPDATE runtime_data.entity_states
+                SET current_position = current_position - 'runtime_cell_id',
+                updated_at = NOW()
+                WHERE runtime_entity_id = $1
+            """, runtime_entity_id)
+            
+            self.logger.info(f"Player {runtime_entity_id} removed from cell {runtime_cell_id} (SSOT: entity_states.current_position)")
                 
         except Exception as e:
             self.logger.error(f"Failed to remove player from cell: {str(e)}")
@@ -945,13 +1122,14 @@ class CellManager:
             # DB에 엔티티-셀 매핑 추가
             pool = await self.db.pool
             async with pool.acquire() as conn:
-                # entity_states 테이블에 cell_id 업데이트 (current_position에 저장)
+                # entity_states 테이블에 runtime_cell_id 업데이트 (SSOT: current_position에 저장)
+                # 원칙: runtime_cell_id는 UUID이므로 uuid::text로 변환
                 await conn.execute("""
                     UPDATE runtime_data.entity_states
                     SET current_position = jsonb_set(
                         COALESCE(current_position, '{}'::jsonb),
-                        '{current_cell_id}',
-                        to_jsonb($1::text)
+                        '{runtime_cell_id}',
+                        to_jsonb($1::uuid::text)
                     ),
                     updated_at = NOW()
                     WHERE runtime_entity_id = $2
@@ -992,10 +1170,10 @@ class CellManager:
             # DB에서 엔티티-셀 매핑 제거
             pool = await self.db.pool
             async with pool.acquire() as conn:
-                # entity_states 테이블에서 cell_id 제거
+                # entity_states 테이블에서 runtime_cell_id 제거 (SSOT: current_position에서 제거)
                 await conn.execute("""
                     UPDATE runtime_data.entity_states
-                    SET current_position = current_position - 'current_cell_id',
+                    SET current_position = current_position - 'runtime_cell_id',
                     updated_at = NOW()
                     WHERE runtime_entity_id = $1
                 """, runtime_entity_id)

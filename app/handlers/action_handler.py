@@ -192,23 +192,35 @@ class ActionHandler:
                            session_id: str = None) -> ActionResult:
         """행동 실행"""
         try:
-            self.logger.info(f"Executing action: {action_type} by player {entity_id}")
+            self.logger.info(f"Executing action: {action_type} by player {entity_id}, target_id: {target_id}")
+            
+            # session_id를 parameters에 병합
+            if parameters is None:
+                parameters = {}
+            if session_id and "session_id" not in parameters:
+                parameters["session_id"] = session_id
+                self.logger.debug(f"session_id를 parameters에 병합: {session_id}")
+            elif session_id and "session_id" in parameters:
+                # parameters에 이미 session_id가 있으면 파라미터로 전달된 것을 우선
+                self.logger.debug(f"parameters에 이미 session_id가 있음: {parameters.get('session_id')}")
             
             # 행동 처리 메서드 호출
             handler = self.action_handlers.get(action_type)
             if not handler:
+                self.logger.error(f"Unknown action type: {action_type}")
                 return ActionResult.failure_result(f"Unknown action type: {action_type}")
             
             result = await handler(entity_id, target_id, parameters)
             
             # 행동 로그 기록 (세션 ID 전달)
             action_name = str(action_type)  # action_type은 이미 문자열
-            await self._log_action(entity_id, action_name, result, session_id)
+            log_session_id = session_id or parameters.get("session_id")
+            await self._log_action(entity_id, action_name, result, log_session_id)
             
             return result
             
         except Exception as e:
-            self.logger.error(f"Action execution failed: {str(e)}")
+            self.logger.error(f"Action execution failed: {str(e)}", exc_info=True)
             return ActionResult.failure_result(f"Action execution failed: {str(e)}")
     
     async def handle_investigate(self, entity_id: str, 
@@ -415,13 +427,11 @@ class ActionHandler:
     
     def _init_object_interaction_handlers(self):
         """오브젝트 상호작용 핸들러 초기화"""
-        if not self.object_state_manager:
-            return
-        
-        # 각 카테고리별 핸들러 생성
+        # object_state_manager가 None이어도 핸들러 초기화
+        # (핸들러 내부에서 필요시 체크)
         handler_kwargs = {
             'db_connection': self.db,
-            'object_state_manager': self.object_state_manager,
+            'object_state_manager': self.object_state_manager,  # None일 수 있음
             'entity_manager': self.entity_manager,
             'inventory_manager': self.inventory_manager,
             'effect_carrier_manager': self.effect_carrier_manager,
@@ -436,6 +446,12 @@ class ActionHandler:
         self.item_handler = ItemManipulationInteractionHandler(**handler_kwargs)
         self.crafting_handler = CraftingInteractionHandler(**handler_kwargs)
         self.destruction_handler = DestructionInteractionHandler(**handler_kwargs)
+        
+        # 초기화 로그 추가
+        if self.object_state_manager:
+            self.logger.info("오브젝트 상호작용 핸들러 초기화 완료 (object_state_manager 있음)")
+        else:
+            self.logger.warning("오브젝트 상호작용 핸들러 초기화 완료 (object_state_manager 없음 - 핸들러 내부에서 체크 필요)")
     
     def _init_entity_interaction_handlers(self):
         """엔티티 상호작용 핸들러 초기화"""

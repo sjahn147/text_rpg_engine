@@ -20,12 +20,11 @@ from common.utils.logger import logger
 
 
 class EntityType(str, Enum):
-    """엔티티 타입 열거형"""
+    """엔티티 타입 열거형 (데이터베이스 entity_type_enum과 일치)"""
     PLAYER = "player"
     NPC = "npc"
     MONSTER = "monster"
-    ENEMY = "enemy"
-    OBJECT = "object"
+    CREATURE = "creature"  # 데이터베이스 ENUM과 일치
 
 
 class EntityStatus(str, Enum):
@@ -184,8 +183,8 @@ class EntityManager:
             
             template = template_result[0]
             
-            # 런타임 엔티티 인스턴스 ID 생성 (UUID)
-            runtime_entity_id = str(uuid.uuid4())
+            # 런타임 엔티티 인스턴스 ID 생성 (UUID 객체)
+            runtime_entity_id = uuid.uuid4()
             
             # 먼저 세션 생성 (존재하지 않는 경우)
             await self.db.execute_query("""

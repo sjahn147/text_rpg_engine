@@ -203,15 +203,33 @@ class InteractionService(BaseGameplayService):
             
             # 현재 셀의 오브젝트 목록에서 요청한 오브젝트 찾기
             target_object = None
+            self.logger.debug(f"오브젝트 검색: object_id={object_id} (type={type(object_id)}), 셀의 오브젝트 수={len(cell_contents.get('objects', []))}")
+            
+            # UUID 헬퍼 함수로 정규화 (문자열로 통일)
+            from app.common.utils.uuid_helper import normalize_uuid, compare_uuids
+            
+            object_id_str = normalize_uuid(object_id)
+            
             for obj in cell_contents.get('objects', []):
-                # object_id가 runtime_object_id 또는 game_object_id와 일치하는지 확인
-                if (obj.get('runtime_object_id') == object_id or 
-                    obj.get('game_object_id') == object_id):
+                # object_id가 runtime_object_id, game_object_id, 또는 object_id와 일치하는지 확인
+                # UUID 헬퍼 함수로 정규화하여 비교
+                obj_runtime_id = normalize_uuid(obj.get('runtime_object_id'))
+                obj_game_id = obj.get('game_object_id')  # game_object_id는 VARCHAR이므로 그대로 사용
+                obj_id = normalize_uuid(obj.get('object_id'))
+                
+                self.logger.debug(f"  오브젝트 비교: object_id={object_id_str}, obj.object_id={obj_id}, obj.runtime_object_id={obj_runtime_id}, obj.game_object_id={obj_game_id}")
+                
+                # UUID 비교는 헬퍼 함수 사용, game_object_id는 문자열 직접 비교
+                if (compare_uuids(obj_runtime_id, object_id_str) or 
+                    obj_game_id == object_id_str or
+                    compare_uuids(obj_id, object_id_str)):
                     target_object = obj
+                    self.logger.debug(f"  오브젝트 찾음: {obj.get('object_name', 'Unknown')}")
                     break
             
             if not target_object:
-                raise ValueError("현재 셀에서 오브젝트를 찾을 수 없습니다.")
+                self.logger.warning(f"오브젝트를 찾을 수 없음: object_id={object_id}, 셀의 오브젝트 목록={[{'object_id': o.get('object_id'), 'runtime_object_id': o.get('runtime_object_id'), 'game_object_id': o.get('game_object_id'), 'object_name': o.get('object_name')} for o in cell_contents.get('objects', [])]}")
+                raise ValueError(f"현재 셀에서 오브젝트를 찾을 수 없습니다. (object_id: {object_id})")
             
             # ActionHandler를 통한 상호작용 처리
             # action_type을 ActionType enum으로 변환
@@ -271,10 +289,15 @@ class InteractionService(BaseGameplayService):
             handler_action_type = action_type_map.get(action_type, ActionType.EXAMINE_OBJECT)
             
             # ActionHandler로 처리
+            # UUID 헬퍼 함수로 정규화 (문자열로 통일)
+            target_id = target_object.get('runtime_object_id') or target_object.get('game_object_id') or target_object.get('object_id')
+            target_id = normalize_uuid(target_id) if target_id else None
+            
+            self.logger.debug(f"ActionHandler 호출: entity_id={player_id}, action_type={handler_action_type}, target_id={target_id}")
             result = await self.action_handler.execute_action(
                 entity_id=player_id,
                 action_type=handler_action_type,
-                target_id=target_object.get('runtime_object_id') or target_object.get('game_object_id'),
+                target_id=target_id,
                 parameters={"session_id": session_id}
             )
             
@@ -327,9 +350,16 @@ class InteractionService(BaseGameplayService):
             
             # 요청한 오브젝트 찾기
             target_object = None
+            object_id_str = str(object_id) if object_id else None
+            
             for obj in cell_contents.get('objects', []):
-                if (obj.get('runtime_object_id') == object_id or 
-                    obj.get('game_object_id') == object_id):
+                obj_runtime_id = str(obj.get('runtime_object_id')) if obj.get('runtime_object_id') else None
+                obj_game_id = str(obj.get('game_object_id')) if obj.get('game_object_id') else None
+                obj_id = str(obj.get('object_id')) if obj.get('object_id') else None
+                
+                if (obj_runtime_id == object_id_str or 
+                    obj_game_id == object_id_str or
+                    obj_id == object_id_str):
                     target_object = obj
                     break
             

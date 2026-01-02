@@ -143,7 +143,7 @@ export const ItemEditorModal: React.FC<ItemEditorModalProps> = ({
                 type="number"
                 value={item.stack_size}
                 onChange={(value) => setItem({ ...item, stack_size: parseInt(value) || 1 })}
-                min="1"
+                min={1}
               />
             </FormField>
             <FormField label="소비 가능" labelWidth={120}>

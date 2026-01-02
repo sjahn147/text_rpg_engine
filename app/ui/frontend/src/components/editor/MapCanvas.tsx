@@ -4,7 +4,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { Stage, Layer, Image, Line, Circle, Group, Text, Rect } from 'react-konva';
 // use-image 대신 직접 이미지 로드
-import { MapMetadata, PinData, RoadData } from '../types';
+import { MapMetadata, PinData, RoadData } from '../../types';
 
 interface MapCanvasProps {
   mapState: MapMetadata | null;

@@ -65,6 +65,9 @@ class GameSession:
 
     async def enter_cell(self, runtime_cell_id: str) -> Dict[str, Any]:
         """플레이어가 새로운 셀에 진입할 때 호출됩니다."""
+        # DatabaseConnection 초기화 보장
+        if not self.db._is_initialized:
+            await self.db.initialize()
         pool = await self.db.pool
         async with pool.acquire() as conn:
             async with conn.transaction():
@@ -93,6 +96,9 @@ class GameSession:
 
     async def move_player(self, player_id: str, target_cell_id: str, new_position: Dict[str, float]) -> bool:
         """플레이어를 이동시킵니다."""
+        # DatabaseConnection 초기화 보장
+        if not self.db._is_initialized:
+            await self.db.initialize()
         pool = await self.db.pool
         async with pool.acquire() as conn:
             try:
@@ -256,6 +262,9 @@ class GameSession:
     async def get_player_entities(self) -> List[Dict[str, Any]]:
         """플레이어 엔티티들을 조회합니다."""
         if self._player_entities is None:
+            # DatabaseConnection 초기화 보장
+            if not self.db._is_initialized:
+                await self.db.initialize()
             pool = await self.db.pool
             async with pool.acquire() as conn:
                 rows = await conn.fetch(

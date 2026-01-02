@@ -2,6 +2,7 @@
 셀 조회 및 이동 서비스
 """
 from typing import Dict, Any, Optional
+import uuid
 from app.core.game_session import GameSession
 from app.services.gameplay.base_service import BaseGameplayService
 from common.utils.logger import logger
@@ -76,10 +77,12 @@ class CellService(BaseGameplayService):
             
             # 응답 구성 (objects에 object_id 추가 및 interaction_type 보장)
             objects = cell_contents.get('objects', [])
+            self.logger.debug(f"셀 조회: objects 수={len(objects)}, objects={objects}")
             for obj in objects:
                 # object_id를 runtime_object_id로 설정 (프론트엔드 호환성)
                 if 'object_id' not in obj:
                     obj['object_id'] = obj.get('runtime_object_id', obj.get('game_object_id', ''))
+                    self.logger.debug(f"object_id 설정: {obj.get('object_name')} -> {obj['object_id']}")
                 
                 # interaction_type이 properties에 없으면 최상위 레벨에서 가져오기
                 if 'interaction_type' not in obj.get('properties', {}):
@@ -87,6 +90,8 @@ class CellService(BaseGameplayService):
                         if 'properties' not in obj:
                             obj['properties'] = {}
                         obj['properties']['interaction_type'] = obj['interaction_type']
+            
+            self.logger.debug(f"최종 objects: {[{'object_id': o.get('object_id'), 'object_name': o.get('object_name'), 'runtime_object_id': o.get('runtime_object_id'), 'game_object_id': o.get('game_object_id')} for o in objects]}")
             
             cell_info = {
                 "cell_id": current_cell_id,
@@ -138,12 +143,20 @@ class CellService(BaseGameplayService):
             
             # game_cell_id로 조회 실패 시 runtime_cell_id로 조회 시도
             if not cell_ref:
-                cell_ref = await self.reference_layer_repo.get_cell_reference(target_cell_id)
-                # runtime_cell_id로 조회된 경우 session_id 확인 (타입 변환 고려)
-                if cell_ref:
-                    ref_session_id = str(cell_ref.get('session_id', ''))
-                    if ref_session_id != str(session_id):
-                        cell_ref = None
+                # UUID 형식인지 확인
+                try:
+                    import uuid
+                    uuid.UUID(target_cell_id)
+                    # UUID 형식이면 runtime_cell_id로 조회
+                    cell_ref = await self.reference_layer_repo.get_cell_reference(target_cell_id)
+                    # runtime_cell_id로 조회된 경우 session_id 확인 (타입 변환 고려)
+                    if cell_ref:
+                        ref_session_id = str(cell_ref.get('session_id', ''))
+                        if ref_session_id != str(session_id):
+                            cell_ref = None
+                except (ValueError, TypeError):
+                    # UUID 형식이 아니면 game_cell_id로 간주
+                    pass
             
             # 여전히 없으면 game_cell_id로 간주하고 생성
             if not cell_ref:
@@ -164,6 +177,12 @@ class CellService(BaseGameplayService):
                 raise ValueError(f"셀 참조 정보가 올바르지 않습니다: runtime_cell_id 키가 없습니다")
             
             runtime_target_cell_id = cell_ref['runtime_cell_id']
+            # UUID 객체인 경우 문자열로 변환
+            if isinstance(runtime_target_cell_id, uuid.UUID):
+                runtime_target_cell_id = str(runtime_target_cell_id)
+            elif runtime_target_cell_id is not None:
+                runtime_target_cell_id = str(runtime_target_cell_id)
+            
             self.logger.info(f"플레이어 이동: session_id={session_id}, target_cell_id={target_cell_id}, runtime_cell_id={runtime_target_cell_id}")
             
             # 이동 처리 (GameSession의 move_player 사용)

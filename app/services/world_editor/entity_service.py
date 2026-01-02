@@ -6,6 +6,8 @@ from database.connection import DatabaseConnection
 from app.api.schemas import EntityCreate, EntityUpdate, EntityResponse
 from common.utils.logger import logger
 from common.utils.jsonb_handler import serialize_jsonb_data, parse_jsonb_data
+from app.common.decorators.error_handler import handle_service_errors
+from app.services.integrity_service import IntegrityService
 
 
 class EntityService:
@@ -13,6 +15,7 @@ class EntityService:
     
     def __init__(self, db_connection: Optional[DatabaseConnection] = None):
         self.db = db_connection or DatabaseConnection()
+        self.integrity_service = IntegrityService(self.db)
     
     async def get_all_entities(self) -> List[EntityResponse]:
         """모든 엔티티 조회"""
@@ -207,6 +210,7 @@ class EntityService:
             logger.error(f"엔티티 조회 실패: {e}")
             raise
     
+    @handle_service_errors
     async def create_entity(self, entity_data: EntityCreate) -> EntityResponse:
         """새 엔티티 생성"""
         try:
@@ -242,6 +246,7 @@ class EntityService:
             logger.error(f"엔티티 생성 실패: {e}")
             raise
     
+    @handle_service_errors
     async def update_entity(
         self, 
         entity_id: str, 
@@ -340,68 +345,28 @@ class EntityService:
                 "locations_in_quest_givers": ["LOC_002", ...]
             }
         """
-        pool = await self.db.pool
-        async with pool.acquire() as conn:
-            # 1. Location의 owner로 참조되는 경우
-            locations_as_owner = await conn.fetch("""
-                SELECT location_id, location_name
-                FROM game_data.world_locations
-                WHERE location_properties->'ownership'->>'owner_entity_id' = $1
-            """, entity_id)
-            
-            # 2. Cell의 owner로 참조되는 경우
-            cells_as_owner = await conn.fetch("""
-                SELECT cell_id, cell_name
-                FROM game_data.world_cells
-                WHERE cell_properties->'ownership'->>'owner_entity_id' = $1
-            """, entity_id)
-            
-            # 3. Location의 quest_givers에 포함된 경우
-            locations_in_quest_givers = await conn.fetch("""
-                SELECT location_id, location_name
-                FROM game_data.world_locations
-                WHERE location_properties->'quests'->'quest_givers' @> $1::jsonb
-            """, serialize_jsonb_data([entity_id]))
-            
-            return {
-                "locations_as_owner": [row['location_id'] for row in locations_as_owner],
-                "cells_as_owner": [row['cell_id'] for row in cells_as_owner],
-                "locations_in_quest_givers": [row['location_id'] for row in locations_in_quest_givers]
-            }
+        # IntegrityService로 위임
+        return await self.integrity_service.validate_entity_references(entity_id)
     
+    @handle_service_errors
     async def delete_entity(self, entity_id: str) -> bool:
         """엔티티 삭제 (SSOT 참조 무결성 검증 포함)"""
-        try:
-            # 참조 검증
-            references = await self.validate_entity_references(entity_id)
+        # IntegrityService로 삭제 가능 여부 검사
+        check_result = await self.integrity_service.can_delete_entity(entity_id)
+        
+        if not check_result.can_delete:
+            raise ValueError(
+                f"엔티티 '{entity_id}'는 다음 위치에서 참조되고 있어 삭제할 수 없습니다:\n" +
+                check_result.error_message +
+                "\n\n참조를 먼저 제거한 후 삭제해주세요."
+            )
+        
+        pool = await self.db.pool
+        async with pool.acquire() as conn:
+            result = await conn.execute("""
+                DELETE FROM game_data.entities
+                WHERE entity_id = $1
+            """, entity_id)
             
-            conflicting_items = []
-            if references["locations_as_owner"]:
-                conflicting_items.append(f"Location owner: {', '.join(references['locations_as_owner'])}")
-            if references["cells_as_owner"]:
-                conflicting_items.append(f"Cell owner: {', '.join(references['cells_as_owner'])}")
-            if references["locations_in_quest_givers"]:
-                conflicting_items.append(f"Quest giver: {', '.join(references['locations_in_quest_givers'])}")
-            
-            if conflicting_items:
-                raise ValueError(
-                    f"엔티티 '{entity_id}'는 다음 위치에서 참조되고 있어 삭제할 수 없습니다:\n" +
-                    "\n".join(conflicting_items) +
-                    "\n\n참조를 먼저 제거한 후 삭제해주세요."
-                )
-            
-            pool = await self.db.pool
-            async with pool.acquire() as conn:
-                result = await conn.execute("""
-                    DELETE FROM game_data.entities
-                    WHERE entity_id = $1
-                """, entity_id)
-                
-                return result == "DELETE 1"
-        except ValueError:
-            # 참조 무결성 에러는 그대로 전파
-            raise
-        except Exception as e:
-            logger.error(f"엔티티 삭제 실패: {e}")
-            raise
+            return result == "DELETE 1"
 

@@ -2,7 +2,7 @@
  * 핀 전문 편집기 패널 - 5개 탭 구조
  */
 import React, { useState, useEffect } from 'react';
-import { PinData, RegionData, LocationData, CellData, DnDLocationInfo } from '../types';
+import { PinData, RegionData, LocationData, CellData, DnDLocationInfo } from '../../types';
 import { regionsApi, locationsApi, cellsApi, pinsApi } from '../../services/api';
 import { CollapsibleSection } from '../common/ui/CollapsibleSection';
 import { FormField } from '../common/ui/FormField';
@@ -982,10 +982,8 @@ export const PinEditorNew: React.FC<PinEditorProps> = ({
                     if (npcName && currentRegion && regionLocations.length > 0) {
                       const locationId = regionLocations[0].location_id; // 첫 번째 location에 추가
                       try {
-                        // Entity ID 생성 (간단한 방식)
-                        const entityId = `NPC_${npcName.toUpperCase().replace(/\s+/g, '_')}_${Date.now()}`;
+                        // Entity ID는 백엔드에서 자동 생성
                         await entitiesApi.create({
-                          entity_id: entityId,
                           entity_type: 'npc',
                           entity_name: npcName,
                           entity_description: '',
@@ -1228,9 +1226,8 @@ export const PinEditorNew: React.FC<PinEditorProps> = ({
                     const npcName = prompt('NPC 이름을 입력하세요:');
                     if (npcName && currentLocation) {
                       try {
-                        const entityId = `NPC_${npcName.toUpperCase().replace(/\s+/g, '_')}_${Date.now()}`;
+                        // Entity ID는 백엔드에서 자동 생성
                         await entitiesApi.create({
-                          entity_id: entityId,
                           entity_type: 'npc',
                           entity_name: npcName,
                           entity_description: '',
@@ -1398,9 +1395,8 @@ export const PinEditorNew: React.FC<PinEditorProps> = ({
                     const npcName = prompt('NPC 이름을 입력하세요:');
                     if (npcName && currentCell) {
                       try {
-                        const entityId = `NPC_${npcName.toUpperCase().replace(/\s+/g, '_')}_${Date.now()}`;
+                        // Entity ID는 백엔드에서 자동 생성
                         await entitiesApi.create({
-                          entity_id: entityId,
                           entity_type: 'npc',
                           entity_name: npcName,
                           entity_description: '',

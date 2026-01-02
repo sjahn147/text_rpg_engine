@@ -1,7 +1,8 @@
 """
 ID 생성기 - 게임 데이터 ID 생성 규칙
 """
-from typing import Optional
+import re
+from typing import Optional, Tuple
 from database.connection import DatabaseConnection
 from common.utils.logger import logger
 
@@ -9,8 +10,50 @@ from common.utils.logger import logger
 class IDGenerator:
     """게임 데이터 ID 생성기"""
     
+    # ID 명명 규칙 검증 패턴
+    VALIDATION_PATTERNS = {
+        'region': r'^REG_[A-Z0-9_]+_\d{3}$',  # REG_[대륙]_[지역]_[일련번호]
+        'location': r'^LOC_[A-Z0-9_]+_\d{3}$',  # LOC_[지역]_[장소]_[일련번호]
+        'cell': r'^CELL_[A-Z0-9_]+_\d{3}$',  # CELL_[위치타입]_[세부위치]_[일련번호]
+        'entity': r'^[A-Z]+_[A-Z0-9_]+_\d{3}$',  # [종족]_[직업/역할]_[일련번호]
+        'object': r'^OBJ_[A-Z0-9_]+_\d{3}$',  # OBJ_[타입]_[이름]_[일련번호]
+        'item': r'^ITEM_[A-Z0-9_]+_\d{3}$',  # ITEM_[타입]_[이름]_[일련번호]
+        'pin': r'^PIN_[A-Z0-9_]+_\d{3}$',  # PIN_[타입]_[이름]_[일련번호]
+    }
+    
     def __init__(self, db_connection: Optional[DatabaseConnection] = None):
         self.db = db_connection or DatabaseConnection()
+    
+    @classmethod
+    def validate_id(cls, entity_type: str, entity_id: str) -> Tuple[bool, Optional[str]]:
+        """
+        ID가 명명 규칙을 따르는지 검증
+        
+        Args:
+            entity_type: 엔티티 타입 ('region', 'location', 'cell', 'entity', 'object', 'item', 'pin')
+            entity_id: 검증할 ID
+        
+        Returns:
+            (검증 성공 여부, 에러 메시지) 튜플
+        """
+        pattern = cls.VALIDATION_PATTERNS.get(entity_type)
+        if not pattern:
+            return False, f"Unknown entity type: {entity_type}. Valid types: {list(cls.VALIDATION_PATTERNS.keys())}"
+        
+        if not re.match(pattern, entity_id):
+            expected_format = {
+                'region': 'REG_[대륙]_[지역]_[일련번호]',
+                'location': 'LOC_[지역]_[장소]_[일련번호]',
+                'cell': 'CELL_[위치타입]_[세부위치]_[일련번호]',
+                'entity': '[종족]_[직업/역할]_[일련번호]',
+                'object': 'OBJ_[타입]_[이름]_[일련번호]',
+                'item': 'ITEM_[타입]_[이름]_[일련번호]',
+                'pin': 'PIN_[타입]_[이름]_[일련번호]',
+            }.get(entity_type, '알 수 없는 형식')
+            
+            return False, f"Invalid {entity_type} ID format. Expected: {expected_format}, Got: {entity_id}"
+        
+        return True, None
     
     async def generate_location_id(self, region_id: str, location_name: str) -> str:
         """

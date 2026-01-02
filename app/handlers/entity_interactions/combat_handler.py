@@ -33,7 +33,7 @@ class CombatHandler(ActionHandlerBase):
             target = target_result.entity
             
             # 공격 가능 여부 확인
-            if target.entity_type not in [EntityType.MONSTER, EntityType.NPC, EntityType.ENEMY]:
+            if target.entity_type not in [EntityType.MONSTER, EntityType.NPC, EntityType.CREATURE]:
                 return ActionResult.failure_result(f"{target.name}을(를) 공격할 수 없습니다.")
             
             # 공격 데이터 생성

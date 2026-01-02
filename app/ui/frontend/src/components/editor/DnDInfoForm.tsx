@@ -2,7 +2,7 @@
  * D&D 스타일 정보 입력 폼 컴포넌트
  */
 import React, { useState, useEffect } from 'react';
-import { DnDLocationInfo } from '../types';
+import { DnDLocationInfo } from '../../types';
 
 interface DnDInfoFormProps {
   gameDataId: string;

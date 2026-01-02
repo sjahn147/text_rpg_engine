@@ -102,10 +102,10 @@ class ObjectStateManager:
                     )
                     
                     if object_ref:
-                        runtime_object_id = str(object_ref['runtime_object_id'])
+                        runtime_object_id = object_ref['runtime_object_id']
                     else:
                         # 런타임 오브젝트 인스턴스 생성
-                        runtime_object_id = str(uuid.uuid4())
+                        runtime_object_id = uuid.uuid4()
                         
                         # 게임 오브젝트 템플릿에서 object_type 조회
                         game_object = await conn.fetchrow(
@@ -262,10 +262,10 @@ class ObjectStateManager:
                         )
                         
                         if object_ref:
-                            runtime_object_id = str(object_ref['runtime_object_id'])
+                            runtime_object_id = object_ref['runtime_object_id']
                         else:
                             # 런타임 오브젝트 인스턴스 생성
-                            runtime_object_id = str(uuid.uuid4())
+                            runtime_object_id = uuid.uuid4()
                             
                             # 게임 오브젝트 템플릿에서 object_type 조회
                             game_object = await conn.fetchrow(

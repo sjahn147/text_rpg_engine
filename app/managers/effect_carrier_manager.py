@@ -123,8 +123,10 @@ class EffectCarrierManager:
                 return EffectCarrierResult.error_result("효과 데이터는 필수입니다")
             
             # Effect Carrier 데이터 생성
+            # UUID 객체로 생성 후 Pydantic 모델 전달 시 문자열로 변환 (API 경계)
+            effect_id_uuid = uuid.uuid4()
             effect_carrier = EffectCarrierData(
-                effect_id=str(uuid.uuid4()),
+                effect_id=str(effect_id_uuid),
                 name=name.strip(),
                 carrier_type=carrier_type,
                 effect_json=effect_json,

@@ -124,8 +124,10 @@ export const InteractionScreen: React.FC<InteractionScreenProps> = ({
 
   const handleActionClick = (actionId: string) => {
     setSelectedAction(actionId);
-    const targetId = object ? object.object_id : (entity ? entity.entity_id : '');
-    onAction(actionId, targetId);
+    const targetId = object ? object.object_id : (entity ? entity.entity_id : undefined);
+    if (targetId) {
+      onAction(actionId, targetId);
+    }
   };
 
   return (

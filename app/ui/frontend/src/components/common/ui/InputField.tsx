@@ -13,6 +13,7 @@ interface InputFieldProps {
   options?: string[];
   min?: number;
   max?: number;
+  step?: number;
   rows?: number;
 }
 
@@ -26,6 +27,7 @@ export const InputField: React.FC<InputFieldProps> = ({
   options = [],
   min,
   max,
+  step,
   rows = 3,
 }) => {
   const handleCopy = () => {
@@ -177,6 +179,7 @@ export const InputField: React.FC<InputFieldProps> = ({
         readOnly={readOnly}
         min={min}
         max={max}
+        step={step}
         style={{
           flex: 1,
           fontSize: '10px',

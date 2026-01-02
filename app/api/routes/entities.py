@@ -8,6 +8,7 @@ from app.api.schemas import (
     EntityCreate, EntityUpdate, EntityResponse
 )
 from app.services.world_editor.entity_service import EntityService
+from app.services.world_editor.id_generator import IDGenerator
 
 router = APIRouter()
 entity_service = EntityService()
@@ -46,12 +47,36 @@ async def get_entity(entity_id: str):
 @router.post("/", response_model=EntityResponse)
 async def create_entity(entity_data: EntityCreate):
     """새 엔티티 생성"""
+    # ID가 제공된 경우 규칙 검증
+    if entity_data.entity_id:
+        is_valid, error_msg = IDGenerator.validate_id('entity', entity_data.entity_id)
+        if not is_valid:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid entity_id format: {error_msg}"
+            )
+    else:
+        # ID가 없으면 자동 생성
+        id_generator = IDGenerator()
+        entity_data.entity_id = await id_generator.generate_entity_id(
+            entity_data.entity_type,
+            entity_data.entity_name
+        )
+    
     return await entity_service.create_entity(entity_data)
 
 
 @router.put("/{entity_id}", response_model=EntityResponse)
 async def update_entity(entity_id: str, entity_data: EntityUpdate):
     """엔티티 정보 업데이트"""
+    # 엔티티 ID 규칙 검증
+    is_valid, error_msg = IDGenerator.validate_id('entity', entity_id)
+    if not is_valid:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid entity_id format: {error_msg}"
+        )
+    
     return await entity_service.update_entity(entity_id, entity_data)
 
 
