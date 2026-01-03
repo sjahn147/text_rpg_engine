@@ -640,15 +640,15 @@ class ActionService(BaseGameplayService):
                     # 이미 pickup 액션이 있는지 확인
                     has_pickup = any(a.get('action_type') == 'pickup' for a in object_actions)
                     if not has_pickup and 'pickup' not in interactions:
-                    object_actions.append({
-                        "action_id": f"pickup_object_{object_id}",
-                        "action_type": "pickup",
-                        "text": f"{object_name}에서 아이템 획득",
-                        "target_id": object_id,
-                        "target_name": object_name,
-                        "target_type": "object",
-                        "description": f"{len(contents)}개의 항목이 있습니다.",
-                    })
+                        object_actions.append({
+                            "action_id": f"pickup_object_{object_id}",
+                            "action_type": "pickup",
+                            "text": f"{object_name}에서 아이템 획득",
+                            "target_id": object_id,
+                            "target_name": object_name,
+                            "target_type": "object",
+                            "description": f"{len(contents)}개의 항목이 있습니다.",
+                        })
                 
                 # 오브젝트 액션들을 메인 액션 리스트에 추가
                 actions.extend(object_actions)

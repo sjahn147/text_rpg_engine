@@ -225,4 +225,229 @@ class TestActionServiceStateTransition:
         ) is True, "open -> closed 전이가 가능해야 함"
         
         logger.info("[OK] 상태 필터링이 적용된 액션 생성 테스트 통과")
+    
+    @pytest.mark.asyncio
+    async def test_generate_actions_from_interaction_type_with_possible_states(self):
+        """possible_states 기반 동적 액션 생성 테스트"""
+        db = DatabaseConnection()
+        action_service = ActionService(db)
+        
+        # Arrange
+        object_actions = []
+        object_id = "test_object_001"
+        object_name = "테스트 오브젝트"
+        interaction_type = "openable"
+        current_state = "closed"
+        possible_states = ["closed", "open"]
+        properties = {}
+        
+        # Act
+        action_service._generate_actions_from_interaction_type(
+            object_actions=object_actions,
+            object_id=object_id,
+            object_name=object_name,
+            interaction_type=interaction_type,
+            current_state=current_state,
+            possible_states=possible_states,
+            properties=properties
+        )
+        
+        # Assert
+        assert len(object_actions) > 0, "액션이 생성되어야 함"
+        open_action = next((a for a in object_actions if a.get('action_type') == 'open'), None)
+        assert open_action is not None, "open 액션이 생성되어야 함"
+        assert open_action['target_id'] == object_id
+        assert open_action['target_name'] == object_name
+        assert '열기' in open_action['text']
+    
+    @pytest.mark.asyncio
+    async def test_generate_actions_from_interaction_type_open_to_close(self):
+        """open 상태에서 close 액션 생성 테스트"""
+        db = DatabaseConnection()
+        action_service = ActionService(db)
+        
+        # Arrange
+        object_actions = []
+        object_id = "test_object_002"
+        object_name = "테스트 문"
+        interaction_type = "openable"
+        current_state = "open"
+        possible_states = ["closed", "open"]
+        properties = {}
+        
+        # Act
+        action_service._generate_actions_from_interaction_type(
+            object_actions=object_actions,
+            object_id=object_id,
+            object_name=object_name,
+            interaction_type=interaction_type,
+            current_state=current_state,
+            possible_states=possible_states,
+            properties=properties
+        )
+        
+        # Assert
+        close_action = next((a for a in object_actions if a.get('action_type') == 'close'), None)
+        assert close_action is not None, "close 액션이 생성되어야 함"
+        assert close_action['target_id'] == object_id
+        assert '닫기' in close_action['text']
+    
+    @pytest.mark.asyncio
+    async def test_generate_actions_from_interaction_type_lightable(self):
+        """lightable interaction_type 테스트"""
+        db = DatabaseConnection()
+        action_service = ActionService(db)
+        
+        # Arrange
+        object_actions = []
+        object_id = "test_lamp_001"
+        object_name = "테스트 램프"
+        interaction_type = "lightable"
+        current_state = "unlit"
+        possible_states = ["unlit", "lit"]
+        properties = {}
+        
+        # Act
+        action_service._generate_actions_from_interaction_type(
+            object_actions=object_actions,
+            object_id=object_id,
+            object_name=object_name,
+            interaction_type=interaction_type,
+            current_state=current_state,
+            possible_states=possible_states,
+            properties=properties
+        )
+        
+        # Assert
+        light_action = next((a for a in object_actions if a.get('action_type') == 'light'), None)
+        assert light_action is not None, "light 액션이 생성되어야 함"
+        assert '불 켜기' in light_action['text']
+    
+    @pytest.mark.asyncio
+    async def test_generate_actions_from_interaction_type_without_possible_states(self):
+        """possible_states가 없는 경우 interaction_type 기반 액션 생성 테스트"""
+        db = DatabaseConnection()
+        action_service = ActionService(db)
+        
+        # Arrange
+        object_actions = []
+        object_id = "test_restable_001"
+        object_name = "테스트 침대"
+        interaction_type = "restable"
+        current_state = None
+        possible_states = []
+        properties = {}
+        
+        # Act
+        action_service._generate_actions_from_interaction_type(
+            object_actions=object_actions,
+            object_id=object_id,
+            object_name=object_name,
+            interaction_type=interaction_type,
+            current_state=current_state,
+            possible_states=possible_states,
+            properties=properties
+        )
+        
+        # Assert
+        rest_action = next((a for a in object_actions if a.get('action_type') == 'rest'), None)
+        assert rest_action is not None, "rest 액션이 생성되어야 함"
+        assert rest_action['target_id'] == object_id
+        assert '쉬기' in rest_action['text']
+    
+    @pytest.mark.asyncio
+    async def test_generate_actions_from_interaction_type_with_contents(self):
+        """contents가 있는 경우 pickup 액션 생성 테스트"""
+        db = DatabaseConnection()
+        action_service = ActionService(db)
+        
+        # Arrange
+        object_actions = []
+        object_id = "test_chest_001"
+        object_name = "테스트 상자"
+        interaction_type = "openable"
+        current_state = "open"
+        possible_states = ["closed", "open"]
+        properties = {
+            'contents': ['ITEM_SWORD_001', 'ITEM_POTION_001']
+        }
+        
+        # Act
+        action_service._generate_actions_from_interaction_type(
+            object_actions=object_actions,
+            object_id=object_id,
+            object_name=object_name,
+            interaction_type=interaction_type,
+            current_state=current_state,
+            possible_states=possible_states,
+            properties=properties
+        )
+        
+        # Assert
+        pickup_action = next((a for a in object_actions if a.get('action_type') == 'pickup'), None)
+        assert pickup_action is not None, "pickup 액션이 생성되어야 함"
+        assert pickup_action['target_id'] == object_id
+        assert '아이템 획득' in pickup_action['text']
+        assert '2개의 항목' in pickup_action['description']
+    
+    @pytest.mark.asyncio
+    async def test_generate_actions_from_interaction_type_sitable(self):
+        """sitable interaction_type 테스트"""
+        db = DatabaseConnection()
+        action_service = ActionService(db)
+        
+        # Arrange
+        object_actions = []
+        object_id = "test_chair_001"
+        object_name = "테스트 의자"
+        interaction_type = "sitable"
+        current_state = None
+        possible_states = []
+        properties = {}
+        
+        # Act
+        action_service._generate_actions_from_interaction_type(
+            object_actions=object_actions,
+            object_id=object_id,
+            object_name=object_name,
+            interaction_type=interaction_type,
+            current_state=current_state,
+            possible_states=possible_states,
+            properties=properties
+        )
+        
+        # Assert
+        sit_action = next((a for a in object_actions if a.get('action_type') == 'sit'), None)
+        assert sit_action is not None, "sit 액션이 생성되어야 함"
+        assert sit_action['target_id'] == object_id
+        assert '앉기' in sit_action['text']
+    
+    @pytest.mark.asyncio
+    async def test_generate_actions_from_interaction_type_none_interaction(self):
+        """interaction_type이 none인 경우 액션 생성 안 함 테스트"""
+        db = DatabaseConnection()
+        action_service = ActionService(db)
+        
+        # Arrange
+        object_actions = []
+        object_id = "test_static_001"
+        object_name = "테스트 정적 오브젝트"
+        interaction_type = "none"
+        current_state = None
+        possible_states = []
+        properties = {}
+        
+        # Act
+        action_service._generate_actions_from_interaction_type(
+            object_actions=object_actions,
+            object_id=object_id,
+            object_name=object_name,
+            interaction_type=interaction_type,
+            current_state=current_state,
+            possible_states=possible_states,
+            properties=properties
+        )
+        
+        # Assert
+        assert len(object_actions) == 0, "interaction_type이 none이면 액션이 생성되지 않아야 함"
 
