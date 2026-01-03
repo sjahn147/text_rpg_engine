@@ -8,6 +8,9 @@ from app.services.gameplay.interaction_service import InteractionService
 from app.services.gameplay.action_service import ActionService
 from app.services.gameplay.character_service import CharacterService
 from app.services.gameplay.object_service import ObjectService
+from app.services.gameplay.journal_service import JournalService
+from app.services.gameplay.map_service import MapService
+from app.services.gameplay.exploration_service import ExplorationService
 
 __all__ = [
     'GameService',
@@ -17,5 +20,8 @@ __all__ = [
     'ActionService',
     'CharacterService',
     'ObjectService',
+    'JournalService',
+    'MapService',
+    'ExplorationService',
 ]
 

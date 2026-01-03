@@ -11,7 +11,10 @@ from app.services.gameplay import (
     InteractionService,
     ActionService,
     CharacterService,
-    ObjectService
+    ObjectService,
+    JournalService,
+    MapService,
+    ExplorationService
 )
 from common.utils.logger import logger
 
@@ -25,6 +28,9 @@ _interaction_service: Optional[InteractionService] = None
 _action_service: Optional[ActionService] = None
 _character_service: Optional[CharacterService] = None
 _object_service: Optional[ObjectService] = None
+_journal_service: Optional[JournalService] = None
+_map_service: Optional[MapService] = None
+_exploration_service: Optional[ExplorationService] = None
 
 def get_game_service() -> GameService:
     """GameService 인스턴스 생성 (싱글톤)"""
@@ -74,6 +80,27 @@ def get_object_service() -> ObjectService:
     if _object_service is None:
         _object_service = ObjectService()
     return _object_service
+
+def get_journal_service() -> JournalService:
+    """JournalService 인스턴스 생성 (싱글톤)"""
+    global _journal_service
+    if _journal_service is None:
+        _journal_service = JournalService()
+    return _journal_service
+
+def get_map_service() -> MapService:
+    """MapService 인스턴스 생성 (싱글톤)"""
+    global _map_service
+    if _map_service is None:
+        _map_service = MapService()
+    return _map_service
+
+def get_exploration_service() -> ExplorationService:
+    """ExplorationService 인스턴스 생성 (싱글톤)"""
+    global _exploration_service
+    if _exploration_service is None:
+        _exploration_service = ExplorationService()
+    return _exploration_service
 
 
 # 요청/응답 스키마
@@ -1108,5 +1135,257 @@ async def get_categorized_actions(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"카테고리별 액션 조회 실패: {str(e)}"
+        )
+
+
+# =====================================================
+# 저널 관련 API
+# =====================================================
+
+@router.get("/journal/{session_id}", response_model=Dict[str, Any])
+async def get_journal(
+    session_id: str,
+    service: JournalService = Depends(get_journal_service)
+):
+    """
+    저널 데이터 통합 조회
+    
+    Args:
+        session_id: 게임 세션 ID
+        
+    Returns:
+        저널 데이터 (퀘스트/이야기/발견/인물/장소)
+    """
+    try:
+        result = await service.get_journal(session_id)
+        return result
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.error(f"저널 데이터 조회 실패: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"저널 데이터 조회 실패: {str(e)}"
+        )
+
+
+@router.get("/journal/story/{session_id}", response_model=Dict[str, Any])
+async def get_story_history(
+    session_id: str,
+    service: JournalService = Depends(get_journal_service)
+):
+    """
+    이야기 히스토리 조회
+    
+    Args:
+        session_id: 게임 세션 ID
+        
+    Returns:
+        이야기 히스토리 (주요 이벤트, 선택한 분기)
+    """
+    try:
+        result = await service.get_story_history(session_id)
+        return result
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.error(f"이야기 히스토리 조회 실패: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"이야기 히스토리 조회 실패: {str(e)}"
+        )
+
+
+@router.get("/journal/discoveries/{session_id}", response_model=Dict[str, Any])
+async def get_discoveries(
+    session_id: str,
+    service: JournalService = Depends(get_journal_service)
+):
+    """
+    발견한 정보 조회
+    
+    Args:
+        session_id: 게임 세션 ID
+        
+    Returns:
+        발견한 오브젝트, 셀, 엔티티
+    """
+    try:
+        result = await service.get_discoveries(session_id)
+        return result
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.error(f"발견한 정보 조회 실패: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"발견한 정보 조회 실패: {str(e)}"
+        )
+
+
+@router.get("/journal/characters/{session_id}", response_model=Dict[str, Any])
+async def get_characters(
+    session_id: str,
+    service: JournalService = Depends(get_journal_service)
+):
+    """
+    만난 NPC 목록 및 대화 히스토리 조회
+    
+    Args:
+        session_id: 게임 세션 ID
+        
+    Returns:
+        만난 NPC 목록 및 대화 히스토리
+    """
+    try:
+        result = await service.get_characters(session_id)
+        return result
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.error(f"만난 NPC 목록 조회 실패: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"만난 NPC 목록 조회 실패: {str(e)}"
+        )
+
+
+@router.get("/journal/locations/{session_id}", response_model=Dict[str, Any])
+async def get_locations(
+    session_id: str,
+    service: JournalService = Depends(get_journal_service)
+):
+    """
+    방문한 셀/위치 목록 조회
+    
+    Args:
+        session_id: 게임 세션 ID
+        
+    Returns:
+        방문한 셀/위치 목록
+    """
+    try:
+        result = await service.get_locations(session_id)
+        return result
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.error(f"방문한 위치 목록 조회 실패: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"방문한 위치 목록 조회 실패: {str(e)}"
+        )
+
+
+# =====================================================
+# 맵 관련 API
+# =====================================================
+
+@router.get("/map/{session_id}", response_model=Dict[str, Any])
+async def get_map_data(
+    session_id: str,
+    service: MapService = Depends(get_map_service)
+):
+    """
+    맵 데이터 조회 (계층적 구조: 지역 → 위치 → 셀)
+    
+    Args:
+        session_id: 게임 세션 ID
+        
+    Returns:
+        맵 데이터 (계층적 구조)
+    """
+    try:
+        result = await service.get_map_data(session_id)
+        return result
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.error(f"맵 데이터 조회 실패: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"맵 데이터 조회 실패: {str(e)}"
+        )
+
+
+@router.get("/map/discovered/{session_id}", response_model=Dict[str, Any])
+async def get_discovered_cells(
+    session_id: str,
+    service: MapService = Depends(get_map_service)
+):
+    """
+    발견한 셀 목록 조회
+    
+    Args:
+        session_id: 게임 세션 ID
+        
+    Returns:
+        발견한 셀 목록
+    """
+    try:
+        result = await service.get_discovered_cells(session_id)
+        return result
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.error(f"발견한 셀 목록 조회 실패: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"발견한 셀 목록 조회 실패: {str(e)}"
+        )
+
+
+# =====================================================
+# 탐험 관련 API
+# =====================================================
+
+@router.get("/exploration/{session_id}", response_model=Dict[str, Any])
+async def get_exploration_progress(
+    session_id: str,
+    service: ExplorationService = Depends(get_exploration_service)
+):
+    """
+    탐험 진행도 조회
+    
+    Args:
+        session_id: 게임 세션 ID
+        
+    Returns:
+        탐험 진행도 (발견한 셀 수 / 전체 셀 수)
+    """
+    try:
+        result = await service.get_exploration_progress(session_id)
+        return result
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.error(f"탐험 진행도 조회 실패: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"탐험 진행도 조회 실패: {str(e)}"
         )
 
