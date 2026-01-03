@@ -3,13 +3,14 @@
 """
 from typing import Optional, List, Dict, Any
 from fastapi import APIRouter, HTTPException, status, Depends, Query
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, validator
 from app.services.gameplay import (
     GameService,
     CellService,
     DialogueService,
     InteractionService,
-    ActionService
+    ActionService,
+    CharacterService
 )
 from common.utils.logger import logger
 
@@ -21,6 +22,7 @@ _cell_service: Optional[CellService] = None
 _dialogue_service: Optional[DialogueService] = None
 _interaction_service: Optional[InteractionService] = None
 _action_service: Optional[ActionService] = None
+_character_service: Optional[CharacterService] = None
 
 def get_game_service() -> GameService:
     """GameService 인스턴스 생성 (싱글톤)"""
@@ -57,6 +59,13 @@ def get_action_service() -> ActionService:
         _action_service = ActionService()
     return _action_service
 
+def get_character_service() -> CharacterService:
+    """CharacterService 인스턴스 생성 (싱글톤)"""
+    global _character_service
+    if _character_service is None:
+        _character_service = CharacterService()
+    return _character_service
+
 
 # 요청/응답 스키마
 class StartGameRequest(BaseModel):
@@ -78,8 +87,20 @@ class MovePlayerResponse(BaseModel):
     message: str = "이동했습니다."
 
 class StartDialogueRequest(BaseModel):
-    session_id: str
-    npc_id: str
+    session_id: str = Field(..., description="게임 세션 ID")
+    npc_id: str = Field(..., description="NPC ID (runtime_entity_id 또는 game_entity_id)")
+    
+    @validator('session_id')
+    def validate_session_id(cls, v):
+        if not v or not isinstance(v, str) or len(v.strip()) == 0:
+            raise ValueError('session_id는 비어있을 수 없습니다.')
+        return v.strip()
+    
+    @validator('npc_id')
+    def validate_npc_id(cls, v):
+        if not v or not isinstance(v, str) or len(v.strip()) == 0:
+            raise ValueError('npc_id는 비어있을 수 없습니다.')
+        return v.strip()
 
 class StartDialogueResponse(BaseModel):
     success: bool
@@ -258,19 +279,51 @@ async def get_current_cell(session_id: str):
 @router.post("/move", response_model=MovePlayerResponse)
 async def move_player(request: MovePlayerRequest):
     """플레이어 이동"""
+    # #region agent log
+    import json as json_module
+    import traceback
+    try:
+        with open('c:\\hobby\\rpg_engine\\.cursor\\debug.log', 'a', encoding='utf-8') as f:
+            f.write(json_module.dumps({"location":"gameplay.py:271","message":"move_player API 진입","data":{"session_id":request.session_id,"target_cell_id":request.target_cell_id},"timestamp":int(__import__('time').time()*1000),"sessionId":"debug-session","runId":"run1","hypothesisId":"B"}) + "\n")
+    except: pass
+    # #endregion
     try:
         service = get_cell_service()
+        # #region agent log
+        try:
+            with open('c:\\hobby\\rpg_engine\\.cursor\\debug.log', 'a', encoding='utf-8') as f:
+                f.write(json_module.dumps({"location":"gameplay.py:277","message":"CellService.move_player 호출 전","data":{"session_id":request.session_id,"target_cell_id":request.target_cell_id},"timestamp":int(__import__('time').time()*1000),"sessionId":"debug-session","runId":"run1","hypothesisId":"B"}) + "\n")
+        except: pass
+        # #endregion
         result = await service.move_player(
             session_id=request.session_id,
             target_cell_id=request.target_cell_id
         )
+        # #region agent log
+        try:
+            with open('c:\\hobby\\rpg_engine\\.cursor\\debug.log', 'a', encoding='utf-8') as f:
+                f.write(json_module.dumps({"location":"gameplay.py:285","message":"CellService.move_player 성공","data":{"session_id":request.session_id,"has_result":bool(result)},"timestamp":int(__import__('time').time()*1000),"sessionId":"debug-session","runId":"run1","hypothesisId":"B"}) + "\n")
+        except: pass
+        # #endregion
         return MovePlayerResponse(**result)
     except ValueError as e:
+        # #region agent log
+        try:
+            with open('c:\\hobby\\rpg_engine\\.cursor\\debug.log', 'a', encoding='utf-8') as f:
+                f.write(json_module.dumps({"location":"gameplay.py:291","message":"move_player ValueError","data":{"session_id":request.session_id,"error":str(e)},"timestamp":int(__import__('time').time()*1000),"sessionId":"debug-session","runId":"run1","hypothesisId":"B"}) + "\n")
+        except: pass
+        # #endregion
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e)
         )
     except Exception as e:
+        # #region agent log
+        try:
+            with open('c:\\hobby\\rpg_engine\\.cursor\\debug.log', 'a', encoding='utf-8') as f:
+                f.write(json_module.dumps({"location":"gameplay.py:299","message":"move_player 예외 발생","data":{"session_id":request.session_id,"error":str(e),"error_type":type(e).__name__,"traceback":traceback.format_exc()},"timestamp":int(__import__('time').time()*1000),"sessionId":"debug-session","runId":"run1","hypothesisId":"B"}) + "\n")
+        except: pass
+        # #endregion
         logger.error(f"이동 실패: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -280,20 +333,28 @@ async def move_player(request: MovePlayerRequest):
 @router.post("/dialogue/start", response_model=StartDialogueResponse)
 async def start_dialogue(request: StartDialogueRequest):
     """대화 시작"""
+    import traceback
+    
     try:
         service = get_dialogue_service()
+        
         result = await service.start_dialogue(
             session_id=request.session_id,
             npc_id=request.npc_id
         )
+        
         return StartDialogueResponse(**result)
     except ValueError as e:
+        
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(e)
         )
     except Exception as e:
+        error_trace = traceback.format_exc()
         logger.error(f"대화 시작 실패: {str(e)}")
+        logger.error(f"Traceback: {error_trace}")
+        
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"대화 시작 실패: {str(e)}"
@@ -302,14 +363,41 @@ async def start_dialogue(request: StartDialogueRequest):
 @router.post("/dialogue/choice")
 async def process_dialogue_choice(request: ProcessDialogueChoiceRequest):
     """대화 선택지 처리"""
+    # #region agent log
+    import json as json_module
+    import traceback
+    try:
+        with open('c:\\hobby\\rpg_engine\\.cursor\\debug.log', 'a', encoding='utf-8') as f:
+            f.write(json_module.dumps({"location":"gameplay.py:354","message":"process_dialogue_choice API 진입","data":{"session_id":request.session_id,"dialogue_id":request.dialogue_id,"choice_id":request.choice_id},"timestamp":int(__import__('time').time()*1000),"sessionId":"debug-session","runId":"run1","hypothesisId":"C"}) + "\n")
+    except: pass
+    # #endregion
     try:
         service = get_dialogue_service()
-        return await service.process_dialogue_choice(
+        # #region agent log
+        try:
+            with open('c:\\hobby\\rpg_engine\\.cursor\\debug.log', 'a', encoding='utf-8') as f:
+                f.write(json_module.dumps({"location":"gameplay.py:361","message":"DialogueService.process_dialogue_choice 호출 전","data":{"session_id":request.session_id,"dialogue_id":request.dialogue_id,"choice_id":request.choice_id},"timestamp":int(__import__('time').time()*1000),"sessionId":"debug-session","runId":"run1","hypothesisId":"C"}) + "\n")
+        except: pass
+        # #endregion
+        result = await service.process_dialogue_choice(
             session_id=request.session_id,
             dialogue_id=request.dialogue_id,
             choice_id=request.choice_id
         )
+        # #region agent log
+        try:
+            with open('c:\\hobby\\rpg_engine\\.cursor\\debug.log', 'a', encoding='utf-8') as f:
+                f.write(json_module.dumps({"location":"gameplay.py:368","message":"DialogueService.process_dialogue_choice 성공","data":{"session_id":request.session_id,"has_result":bool(result),"result_keys":list(result.keys()) if isinstance(result,dict) else None},"timestamp":int(__import__('time').time()*1000),"sessionId":"debug-session","runId":"run1","hypothesisId":"C"}) + "\n")
+        except: pass
+        # #endregion
+        return result
     except Exception as e:
+        # #region agent log
+        try:
+            with open('c:\\hobby\\rpg_engine\\.cursor\\debug.log', 'a', encoding='utf-8') as f:
+                f.write(json_module.dumps({"location":"gameplay.py:373","message":"process_dialogue_choice 예외 발생","data":{"session_id":request.session_id,"dialogue_id":request.dialogue_id,"choice_id":request.choice_id,"error":str(e),"error_type":type(e).__name__,"traceback":traceback.format_exc()},"timestamp":int(__import__('time').time()*1000),"sessionId":"debug-session","runId":"run1","hypothesisId":"C"}) + "\n")
+        except: pass
+        # #endregion
         logger.error(f"대화 선택지 처리 실패: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -342,6 +430,14 @@ async def interact_with_entity(request: InteractRequest):
 @router.post("/interact/object", response_model=InteractResponse)
 async def interact_with_object(request: InteractObjectRequest):
     """오브젝트와 상호작용"""
+    # #region agent log
+    import json as json_module
+    import traceback
+    try:
+        with open('c:\\hobby\\rpg_engine\\.cursor\\debug.log', 'a', encoding='utf-8') as f:
+            f.write(json_module.dumps({"location":"gameplay.py:421","message":"interact_with_object API 진입","data":{"session_id":request.session_id,"object_id":request.object_id,"action_type":request.action_type},"timestamp":int(__import__('time').time()*1000),"sessionId":"debug-session","runId":"run1","hypothesisId":"F"}) + "\n")
+    except: pass
+    # #endregion
     try:
         # 입력 검증
         if not request.session_id:
@@ -357,23 +453,47 @@ async def interact_with_object(request: InteractObjectRequest):
         
         logger.info(f"오브젝트 상호작용 요청: session_id={request.session_id}, object_id={request.object_id} (type={type(request.object_id).__name__}), action_type={request.action_type}")
         service = get_interaction_service()
+        # #region agent log
+        try:
+            with open('c:\\hobby\\rpg_engine\\.cursor\\debug.log', 'a', encoding='utf-8') as f:
+                f.write(json_module.dumps({"location":"gameplay.py:442","message":"InteractionService.interact_with_object 호출 전","data":{"session_id":request.session_id,"object_id":request.object_id},"timestamp":int(__import__('time').time()*1000),"sessionId":"debug-session","runId":"run1","hypothesisId":"F"}) + "\n")
+        except: pass
+        # #endregion
         result = await service.interact_with_object(
             session_id=request.session_id,
             object_id=request.object_id,
             action_type=request.action_type
         )
+        # #region agent log
+        try:
+            with open('c:\\hobby\\rpg_engine\\.cursor\\debug.log', 'a', encoding='utf-8') as f:
+                f.write(json_module.dumps({"location":"gameplay.py:450","message":"InteractionService.interact_with_object 성공","data":{"success":result.get('success'),"message":result.get('message')},"timestamp":int(__import__('time').time()*1000),"sessionId":"debug-session","runId":"run1","hypothesisId":"F"}) + "\n")
+        except: pass
+        # #endregion
         logger.info(f"오브젝트 상호작용 성공: {result.get('message', '')}")
         return InteractResponse(**result)
     except HTTPException:
         raise
     except ValueError as e:
         logger.warning(f"오브젝트 상호작용 실패 (ValueError): {str(e)}")
+        # #region agent log
+        try:
+            with open('c:\\hobby\\rpg_engine\\.cursor\\debug.log', 'a', encoding='utf-8') as f:
+                f.write(json_module.dumps({"location":"gameplay.py:461","message":"interact_with_object ValueError","data":{"error":str(e)},"timestamp":int(__import__('time').time()*1000),"sessionId":"debug-session","runId":"run1","hypothesisId":"F"}) + "\n")
+        except: pass
+        # #endregion
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(e)
         )
     except Exception as e:
         logger.error(f"오브젝트 상호작용 실패: {str(e)}", exc_info=True)
+        # #region agent log
+        try:
+            with open('c:\\hobby\\rpg_engine\\.cursor\\debug.log', 'a', encoding='utf-8') as f:
+                f.write(json_module.dumps({"location":"gameplay.py:470","message":"interact_with_object 예외 발생","data":{"error":str(e),"error_type":type(e).__name__,"traceback":traceback.format_exc()},"timestamp":int(__import__('time').time()*1000),"sessionId":"debug-session","runId":"run1","hypothesisId":"F"}) + "\n")
+        except: pass
+        # #endregion
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"오브젝트 상호작용 실패: {str(e)}"
@@ -559,11 +679,25 @@ async def drop_item(request: ItemActionRequest):
 @router.get("/actions/{session_id}")
 async def get_available_actions(session_id: str):
     """사용 가능한 액션 조회"""
+    # #region agent log
+    import json as json_module
+    import traceback
+    try:
+        with open('c:\\hobby\\rpg_engine\\.cursor\\debug.log', 'a', encoding='utf-8') as f:
+            f.write(json_module.dumps({"location":"gameplay.py:638","message":"get_available_actions API 진입","data":{"session_id":session_id,"session_id_length":len(session_id) if session_id else 0},"timestamp":int(__import__('time').time()*1000),"sessionId":"debug-session","runId":"run1","hypothesisId":"G"}) + "\n")
+    except: pass
+    # #endregion
     # UUID 형식 검증
     try:
         import uuid
         uuid.UUID(session_id)
-    except ValueError:
+    except ValueError as e:
+        # #region agent log
+        try:
+            with open('c:\\hobby\\rpg_engine\\.cursor\\debug.log', 'a', encoding='utf-8') as f:
+                f.write(json_module.dumps({"location":"gameplay.py:645","message":"get_available_actions UUID 검증 실패","data":{"session_id":session_id,"error":str(e)},"timestamp":int(__import__('time').time()*1000),"sessionId":"debug-session","runId":"run1","hypothesisId":"G"}) + "\n")
+        except: pass
+        # #endregion
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"잘못된 세션 ID 형식: {session_id}"
@@ -571,15 +705,40 @@ async def get_available_actions(session_id: str):
     
     try:
         service = get_action_service()
-        return await service.get_available_actions(session_id)
+        # #region agent log
+        try:
+            with open('c:\\hobby\\rpg_engine\\.cursor\\debug.log', 'a', encoding='utf-8') as f:
+                f.write(json_module.dumps({"location":"gameplay.py:653","message":"ActionService.get_available_actions 호출 전","data":{"session_id":session_id},"timestamp":int(__import__('time').time()*1000),"sessionId":"debug-session","runId":"run1","hypothesisId":"G"}) + "\n")
+        except: pass
+        # #endregion
+        result = await service.get_available_actions(session_id)
+        # #region agent log
+        try:
+            with open('c:\\hobby\\rpg_engine\\.cursor\\debug.log', 'a', encoding='utf-8') as f:
+                f.write(json_module.dumps({"location":"gameplay.py:656","message":"ActionService.get_available_actions 성공","data":{"actions_count":len(result) if isinstance(result, list) else 0},"timestamp":int(__import__('time').time()*1000),"sessionId":"debug-session","runId":"run1","hypothesisId":"G"}) + "\n")
+        except: pass
+        # #endregion
+        return result
     except ValueError as e:
         logger.error(f"액션 조회 실패 (ValueError): {str(e)}")
+        # #region agent log
+        try:
+            with open('c:\\hobby\\rpg_engine\\.cursor\\debug.log', 'a', encoding='utf-8') as f:
+                f.write(json_module.dumps({"location":"gameplay.py:662","message":"get_available_actions ValueError","data":{"error":str(e)},"timestamp":int(__import__('time').time()*1000),"sessionId":"debug-session","runId":"run1","hypothesisId":"G"}) + "\n")
+        except: pass
+        # #endregion
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e)
         )
     except Exception as e:
         logger.error(f"액션 조회 실패: {str(e)}", exc_info=True)
+        # #region agent log
+        try:
+            with open('c:\\hobby\\rpg_engine\\.cursor\\debug.log', 'a', encoding='utf-8') as f:
+                f.write(json_module.dumps({"location":"gameplay.py:670","message":"get_available_actions 예외 발생","data":{"error":str(e),"error_type":type(e).__name__,"traceback":traceback.format_exc()},"timestamp":int(__import__('time').time()*1000),"sessionId":"debug-session","runId":"run1","hypothesisId":"G"}) + "\n")
+        except: pass
+        # #endregion
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"액션 조회 실패: {str(e)}"
@@ -658,5 +817,189 @@ async def delete_save(slot_id: int):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"저장 슬롯 삭제 실패: {str(e)}"
+        )
+
+
+# =====================================================
+# 캐릭터 관련 API
+# =====================================================
+
+@router.get("/character/stats/{session_id}", response_model=Dict[str, Any])
+async def get_character_stats(
+    session_id: str,
+    service: CharacterService = Depends(get_character_service)
+):
+    """
+    캐릭터 능력치 조회
+    
+    Args:
+        session_id: 게임 세션 ID
+        
+    Returns:
+        캐릭터 능력치 정보
+    """
+    try:
+        result = await service.get_character_stats(session_id)
+        return result
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.error(f"캐릭터 능력치 조회 실패: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"캐릭터 능력치 조회 실패: {str(e)}"
+        )
+
+
+@router.get("/character/inventory/{session_id}", response_model=Dict[str, Any])
+async def get_character_inventory(
+    session_id: str,
+    service: CharacterService = Depends(get_character_service)
+):
+    """
+    인벤토리 및 장착 아이템 조회 (Effect Carrier 포함)
+    
+    Args:
+        session_id: 게임 세션 ID
+        
+    Returns:
+        인벤토리 및 장착 아이템 정보
+    """
+    try:
+        result = await service.get_character_inventory(session_id)
+        return result
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.error(f"인벤토리 조회 실패: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"인벤토리 조회 실패: {str(e)}"
+        )
+
+
+@router.get("/character/equipped/{session_id}", response_model=Dict[str, Any])
+async def get_character_equipped(
+    session_id: str,
+    service: CharacterService = Depends(get_character_service)
+):
+    """
+    장착 아이템 조회 (Effect Carrier 포함)
+    
+    Args:
+        session_id: 게임 세션 ID
+        
+    Returns:
+        장착 아이템 정보
+    """
+    try:
+        result = await service.get_character_equipped(session_id)
+        return result
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.error(f"장착 아이템 조회 실패: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"장착 아이템 조회 실패: {str(e)}"
+        )
+
+
+@router.get("/character/applied-effects/{session_id}", response_model=Dict[str, Any])
+async def get_character_applied_effects(
+    session_id: str,
+    service: CharacterService = Depends(get_character_service)
+):
+    """
+    적용 중인 Effect Carrier 조회
+    
+    Args:
+        session_id: 게임 세션 ID
+        
+    Returns:
+        적용 중인 Effect Carrier 목록
+    """
+    try:
+        result = await service.get_character_applied_effects(session_id)
+        return result
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.error(f"적용 중인 Effect Carrier 조회 실패: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"적용 중인 Effect Carrier 조회 실패: {str(e)}"
+        )
+
+
+@router.get("/character/abilities/{session_id}", response_model=Dict[str, Any])
+async def get_character_abilities(
+    session_id: str,
+    service: CharacterService = Depends(get_character_service)
+):
+    """
+    엔티티의 스킬/주문 목록 조회
+    
+    Args:
+        session_id: 게임 세션 ID
+        
+    Returns:
+        스킬 및 주문 목록
+    """
+    try:
+        result = await service.get_character_abilities(session_id)
+        return result
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.error(f"스킬/주문 목록 조회 실패: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"스킬/주문 목록 조회 실패: {str(e)}"
+        )
+
+
+@router.get("/character/spells/{session_id}", response_model=Dict[str, Any])
+async def get_character_spells(
+    session_id: str,
+    service: CharacterService = Depends(get_character_service)
+):
+    """
+    주문 목록 조회 (abilities_magic 테이블 기반)
+    
+    Args:
+        session_id: 게임 세션 ID
+        
+    Returns:
+        주문 목록
+    """
+    try:
+        result = await service.get_character_spells(session_id)
+        return result
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.error(f"주문 목록 조회 실패: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"주문 목록 조회 실패: {str(e)}"
         )
 
