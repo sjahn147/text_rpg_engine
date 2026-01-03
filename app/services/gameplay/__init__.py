@@ -7,6 +7,7 @@ from app.services.gameplay.dialogue_service import DialogueService
 from app.services.gameplay.interaction_service import InteractionService
 from app.services.gameplay.action_service import ActionService
 from app.services.gameplay.character_service import CharacterService
+from app.services.gameplay.object_service import ObjectService
 
 __all__ = [
     'GameService',
@@ -15,5 +16,6 @@ __all__ = [
     'InteractionService',
     'ActionService',
     'CharacterService',
+    'ObjectService',
 ]
 

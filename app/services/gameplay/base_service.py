@@ -1,7 +1,7 @@
 """
 게임플레이 서비스 베이스 클래스
 """
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 from database.connection import DatabaseConnection
 from database.repositories.game_data import GameDataRepository
 from database.repositories.runtime_data import RuntimeDataRepository
@@ -13,6 +13,9 @@ from app.managers.effect_carrier_manager import EffectCarrierManager
 from app.managers.object_state_manager import ObjectStateManager
 from app.handlers.action_handler import ActionHandler
 from common.utils.logger import logger
+
+if TYPE_CHECKING:
+    from app.services.gameplay.action_service import ActionService
 
 
 class BaseGameplayService:
@@ -32,6 +35,7 @@ class BaseGameplayService:
         self._effect_carrier_manager = None
         self._object_state_manager = None
         self._action_handler = None
+        self._action_service = None
     
     @property
     def entity_manager(self) -> EntityManager:
@@ -112,4 +116,12 @@ class BaseGameplayService:
                 inventory_manager=self.inventory_manager
             )
         return self._action_handler
+    
+    @property
+    def action_service(self) -> "ActionService":
+        """ActionService 지연 초기화"""
+        if self._action_service is None:
+            from app.services.gameplay.action_service import ActionService
+            self._action_service = ActionService(self.db)
+        return self._action_service
 

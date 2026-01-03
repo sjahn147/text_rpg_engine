@@ -7,6 +7,7 @@ import uuid
 from app.core.game_session import GameSession
 from app.services.gameplay.base_service import BaseGameplayService
 from common.utils.logger import logger
+from app.common.utils.uuid_helper import normalize_uuid, to_uuid
 
 
 class ActionService(BaseGameplayService):
@@ -661,4 +662,172 @@ class ActionService(BaseGameplayService):
         except Exception as e:
             self.logger.error(f"액션 조회 실패: {str(e)}", exc_info=True)
             raise ValueError(f"액션 조회 중 오류가 발생했습니다: {str(e)}")
+    
+    async def get_available_actions_for_object(
+        self,
+        game_object_id: str,
+        session_id: str,
+        object_state: Optional[Dict[str, Any]] = None
+    ) -> List[Dict[str, Any]]:
+        """
+        특정 오브젝트에 대한 가능한 액션 조회
+        
+        Args:
+            game_object_id: 게임 오브젝트 ID
+            session_id: 세션 ID
+            object_state: 오브젝트 상태 (없으면 조회)
+            
+        Returns:
+            List[Dict[str, Any]]: 가능한 액션 목록
+        """
+        try:
+            # UUID 형식 검증
+            session_id = normalize_uuid(session_id)
+            
+            # object_state가 없으면 조회
+            if not object_state:
+                if not self.object_state_manager:
+                    raise ValueError("ObjectStateManager가 초기화되지 않았습니다")
+                
+                # reference_layer에서 runtime_object_id 조회
+                pool = await self.db.pool
+                async with pool.acquire() as conn:
+                    object_ref = await conn.fetchrow(
+                        """
+                        SELECT runtime_object_id
+                        FROM reference_layer.object_references
+                        WHERE game_object_id = $1 AND session_id = $2
+                        """,
+                        game_object_id,
+                        to_uuid(session_id)
+                    )
+                    
+                    runtime_object_id = str(object_ref['runtime_object_id']) if object_ref else None
+                
+                state_result = await self.object_state_manager.get_object_state(
+                    runtime_object_id=runtime_object_id,
+                    game_object_id=game_object_id,
+                    session_id=session_id
+                )
+                
+                if not state_result.success:
+                    raise ValueError(f"오브젝트 상태 조회 실패: {state_result.message}")
+                
+                object_state = state_result.object_state
+            
+            # 오브젝트 정보 추출
+            object_name = object_state.get('object_name', 'Object')
+            interaction_type = object_state.get('interaction_type', 'examine')
+            possible_states = object_state.get('possible_states', [])
+            if isinstance(possible_states, str):
+                possible_states = json.loads(possible_states)
+            elif possible_states is None:
+                possible_states = []
+            
+            properties = object_state.get('properties', {})
+            if isinstance(properties, str):
+                properties = json.loads(properties)
+            
+            current_state = object_state.get('current_state') or properties.get('state')
+            
+            # 오브젝트 액션 생성
+            object_actions = []
+            
+            # 기본 조사 액션 (항상 가능)
+            object_actions.append({
+                "action_id": f"examine_object_{game_object_id}",
+                "action_type": "examine",
+                "text": f"{object_name} 조사하기",
+                "target_id": game_object_id,
+                "target_name": object_name,
+                "target_type": "object",
+                "description": object_state.get('object_description', ''),
+            })
+            
+            # properties.interactions 확인
+            interactions = properties.get('interactions', {})
+            if isinstance(interactions, str):
+                interactions = json.loads(interactions)
+            
+            # interactions에 정의된 모든 액션 생성
+            for action_type, action_config in interactions.items():
+                if not isinstance(action_config, dict):
+                    continue
+                
+                # 액션 가능 여부 확인
+                can_perform = self._check_action_conditions(
+                    action_config=action_config,
+                    current_state=current_state or '',
+                    possible_states=possible_states or []
+                )
+                
+                if not can_perform:
+                    continue
+                
+                # 액션 텍스트 생성
+                action_text_map = {
+                    'examine': '조사하기', 'inspect': '상세 조사하기', 'search': '찾아보기',
+                    'open': '열기', 'close': '닫기', 'light': '불 켜기', 'extinguish': '불 끄기',
+                    'activate': '활성화하기', 'deactivate': '비활성화하기',
+                    'lock': '잠그기', 'unlock': '잠금 해제하기',
+                    'sit': '앉기', 'stand': '일어서기', 'lie': '눕기', 'get_up': '일어나기',
+                    'climb': '오르기', 'descend': '내려가기',
+                    'rest': '쉬기', 'sleep': '잠자기', 'meditate': '명상하기',
+                    'eat': '먹기', 'drink': '마시기', 'consume': '소비하기',
+                    'read': '읽기', 'study': '공부하기', 'write': '쓰기',
+                    'pickup': '아이템 획득', 'place': '아이템 놓기',
+                    'take': '가져가기', 'put': '넣기', 'combine': '조합하기',
+                    'craft': '제작하기', 'cook': '요리하기', 'repair': '수리하기',
+                    'destroy': '파괴하기', 'break': '부수기', 'dismantle': '분해하기',
+                    'use': '사용하기',
+                }
+                
+                action_text = action_config.get('text') or action_text_map.get(action_type, action_type)
+                if not action_text.endswith('하기') and not action_text.endswith('기'):
+                    action_text = f"{object_name} {action_text}"
+                else:
+                    action_text = f"{object_name} {action_text}"
+                
+                object_actions.append({
+                    "action_id": f"{action_type}_object_{game_object_id}",
+                    "action_type": action_type,
+                    "text": action_text,
+                    "target_id": game_object_id,
+                    "target_name": object_name,
+                    "target_type": "object",
+                    "description": action_config.get('description', ''),
+                })
+            
+            # interaction_type 기반 레거시 지원 (interactions가 없는 경우)
+            if not interactions:
+                self._generate_actions_from_interaction_type(
+                    object_actions=object_actions,
+                    object_id=game_object_id,
+                    object_name=object_name,
+                    interaction_type=interaction_type,
+                    current_state=current_state,
+                    possible_states=possible_states,
+                    properties=properties
+                )
+            
+            # contents가 있는 경우 줍기 액션
+            contents = properties.get('contents', [])
+            if contents and len(contents) > 0:
+                has_pickup = any(a.get('action_type') == 'pickup' for a in object_actions)
+                if not has_pickup and 'pickup' not in interactions:
+                    object_actions.append({
+                        "action_id": f"pickup_object_{game_object_id}",
+                        "action_type": "pickup",
+                        "text": f"{object_name}에서 아이템 획득",
+                        "target_id": game_object_id,
+                        "target_name": object_name,
+                        "target_type": "object",
+                        "description": f"{len(contents)}개의 항목이 있습니다.",
+                    })
+            
+            return object_actions
+            
+        except Exception as e:
+            self.logger.error(f"오브젝트 액션 조회 실패: {str(e)}", exc_info=True)
+            raise ValueError(f"오브젝트 액션 조회 중 오류가 발생했습니다: {str(e)}")
 

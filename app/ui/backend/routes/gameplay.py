@@ -10,7 +10,8 @@ from app.services.gameplay import (
     DialogueService,
     InteractionService,
     ActionService,
-    CharacterService
+    CharacterService,
+    ObjectService
 )
 from common.utils.logger import logger
 
@@ -23,6 +24,7 @@ _dialogue_service: Optional[DialogueService] = None
 _interaction_service: Optional[InteractionService] = None
 _action_service: Optional[ActionService] = None
 _character_service: Optional[CharacterService] = None
+_object_service: Optional[ObjectService] = None
 
 def get_game_service() -> GameService:
     """GameService 인스턴스 생성 (싱글톤)"""
@@ -65,6 +67,13 @@ def get_character_service() -> CharacterService:
     if _character_service is None:
         _character_service = CharacterService()
     return _character_service
+
+def get_object_service() -> ObjectService:
+    """ObjectService 인스턴스 생성 (싱글톤)"""
+    global _object_service
+    if _object_service is None:
+        _object_service = ObjectService()
+    return _object_service
 
 
 # 요청/응답 스키마
@@ -1001,5 +1010,103 @@ async def get_character_spells(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"주문 목록 조회 실패: {str(e)}"
+        )
+
+
+# =====================================================
+# 오브젝트 관련 API
+# =====================================================
+
+@router.get("/object/{object_id}/state", response_model=Dict[str, Any])
+async def get_object_state(
+    object_id: str,
+    session_id: str = Query(..., description="게임 세션 ID"),
+    service: ObjectService = Depends(get_object_service)
+):
+    """
+    오브젝트 상태 조회
+    
+    Args:
+        object_id: 오브젝트 ID (game_object_id 또는 runtime_object_id)
+        session_id: 게임 세션 ID
+        
+    Returns:
+        오브젝트 상태 정보
+    """
+    try:
+        result = await service.get_object_state(object_id, session_id)
+        return result
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.error(f"오브젝트 상태 조회 실패: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"오브젝트 상태 조회 실패: {str(e)}"
+        )
+
+
+@router.get("/object/{object_id}/actions", response_model=Dict[str, Any])
+async def get_object_actions(
+    object_id: str,
+    session_id: str = Query(..., description="게임 세션 ID"),
+    service: ObjectService = Depends(get_object_service)
+):
+    """
+    가능한 액션 조회 (상태 기반)
+    
+    Args:
+        object_id: 오브젝트 ID (game_object_id 또는 runtime_object_id)
+        session_id: 게임 세션 ID
+        
+    Returns:
+        가능한 액션 목록
+    """
+    try:
+        result = await service.get_object_actions(object_id, session_id)
+        return result
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.error(f"오브젝트 액션 조회 실패: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"오브젝트 액션 조회 실패: {str(e)}"
+        )
+
+
+@router.get("/actions/categorized/{session_id}", response_model=Dict[str, Any])
+async def get_categorized_actions(
+    session_id: str,
+    service: ObjectService = Depends(get_object_service)
+):
+    """
+    카테고리별 액션 조회
+    
+    Args:
+        session_id: 게임 세션 ID
+        
+    Returns:
+        카테고리별 액션 목록
+    """
+    try:
+        result = await service.get_categorized_actions(session_id)
+        return result
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.error(f"카테고리별 액션 조회 실패: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"카테고리별 액션 조회 실패: {str(e)}"
         )
 
