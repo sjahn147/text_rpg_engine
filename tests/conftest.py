@@ -5,6 +5,7 @@ pytest 설정 및 공통 픽스처
 - 비동기 이벤트 루프 관리
 """
 import pytest
+import pytest_asyncio
 import asyncio
 import uuid
 from typing import AsyncGenerator, Dict, Any
@@ -28,7 +29,7 @@ def event_loop():
     loop.close()
 
 
-@pytest.fixture(scope="function")
+@pytest_asyncio.fixture(scope="function")
 async def db_connection() -> AsyncGenerator[DatabaseConnection, None]:
     """테스트용 DB 연결"""
     test_id = str(uuid.uuid4())

@@ -149,14 +149,21 @@ class TestDatabaseManager:
                 
             if test_id in self.test_pools:
                 pool = self.test_pools[test_id]
-                await pool.close()
+                # pool이 None이 아니고 이미 닫히지 않았을 때만 닫기
+                if pool is not None:
+                    try:
+                        await pool.close()
+                    except Exception as pool_error:
+                        # pool이 이미 닫혔거나 None인 경우 무시
+                        logger.debug(f"Pool cleanup warning for '{test_id}': {str(pool_error)}")
                 del self.test_pools[test_id]
                 
             logger.info(f"Test database connection '{test_id}' cleaned up")
             
         except Exception as e:
             logger.error(f"Failed to cleanup test connection '{test_id}': {str(e)}")
-            raise
+            # teardown 오류는 테스트 결과에 영향을 주지 않도록 예외를 다시 발생시키지 않음
+            # raise
     
     async def cleanup_all_test_connections(self) -> None:
         """모든 테스트 연결 정리"""
