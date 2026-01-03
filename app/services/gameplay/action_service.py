@@ -122,6 +122,159 @@ class ActionService(BaseGameplayService):
         
         return can_perform
     
+    def _generate_actions_from_interaction_type(
+        self,
+        object_actions: List[Dict[str, Any]],
+        object_id: str,
+        object_name: str,
+        interaction_type: str,
+        current_state: Optional[str],
+        possible_states: List[str],
+        properties: Dict[str, Any]
+    ) -> None:
+        """
+        interaction_type과 possible_states를 기반으로 동적으로 액션 생성
+        
+        Args:
+            object_actions: 액션을 추가할 리스트
+            object_id: 오브젝트 ID
+            object_name: 오브젝트 이름
+            interaction_type: 상호작용 타입
+            current_state: 현재 상태
+            possible_states: 가능한 상태 목록
+            properties: 오브젝트 속성
+        """
+        if not interaction_type or interaction_type == 'none':
+            return
+        
+        # 액션 타입별 텍스트 매핑
+        action_text_map = {
+            'examine': '조사하기',
+            'inspect': '상세 조사하기',
+            'search': '찾아보기',
+            'open': '열기',
+            'close': '닫기',
+            'light': '불 켜기',
+            'extinguish': '불 끄기',
+            'activate': '활성화하기',
+            'deactivate': '비활성화하기',
+            'lock': '잠그기',
+            'unlock': '잠금 해제하기',
+            'sit': '앉기',
+            'stand': '일어서기',
+            'lie': '눕기',
+            'get_up': '일어나기',
+            'climb': '오르기',
+            'descend': '내려가기',
+            'rest': '쉬기',
+            'sleep': '잠자기',
+            'meditate': '명상하기',
+            'eat': '먹기',
+            'drink': '마시기',
+            'consume': '소비하기',
+            'read': '읽기',
+            'study': '공부하기',
+            'write': '쓰기',
+            'pickup': '아이템 획득',
+            'place': '아이템 놓기',
+            'take': '가져가기',
+            'put': '넣기',
+            'combine': '조합하기',
+            'craft': '제작하기',
+            'cook': '요리하기',
+            'repair': '수리하기',
+            'destroy': '파괴하기',
+            'break': '부수기',
+            'dismantle': '분해하기',
+            'use': '사용하기',
+        }
+        
+        # possible_states 기반 동적 액션 생성
+        if possible_states and len(possible_states) > 0:
+            # 상태 전이 기반 액션 생성
+            # possible_states를 기반으로 현재 상태에서 전이 가능한 모든 상태로의 액션 생성
+            current_state_normalized = (current_state or '').lower()
+            possible_states_lower = [s.lower() for s in possible_states]
+            
+            # 상태 전이 쌍 정의
+            state_transition_pairs = [
+                ('closed', 'open', 'open'),
+                ('open', 'closed', 'close'),
+                ('unlit', 'lit', 'light'),
+                ('lit', 'unlit', 'extinguish'),
+                ('locked', 'unlocked', 'unlock'),
+                ('unlocked', 'locked', 'lock'),
+                ('inactive', 'active', 'activate'),
+                ('active', 'inactive', 'deactivate'),
+            ]
+            
+            # 현재 상태에서 전이 가능한 액션 생성
+            for from_state, to_state, action_type in state_transition_pairs:
+                # 현재 상태가 from_state이고, to_state가 possible_states에 있는 경우
+                if (current_state_normalized == from_state.lower() and 
+                    to_state.lower() in possible_states_lower):
+                    # 상태 전이 가능 여부 확인
+                    can_transition = self._can_transition_state(
+                        current_state=current_state or from_state,
+                        target_state=to_state,
+                        possible_states=possible_states
+                    )
+                    if can_transition:
+                        action_text = action_text_map.get(action_type, action_type)
+                        object_actions.append({
+                            "action_id": f"{action_type}_object_{object_id}",
+                            "action_type": action_type,
+                            "text": f"{object_name} {action_text}",
+                            "target_id": object_id,
+                            "target_name": object_name,
+                            "target_type": "object",
+                        })
+        
+        # interaction_type 기반 액션 생성 (possible_states가 없는 경우)
+        if not possible_states or len(possible_states) == 0:
+            interaction_action_map = {
+                'openable': ['open', 'close'],
+                'lightable': ['light', 'extinguish'],
+                'restable': ['rest'],
+                'sitable': ['sit'],
+                'readable': ['read'],
+                'writable': ['write'],
+                'usable': ['use'],
+                'pickupable': ['pickup'],
+                'consumable': ['consume'],
+                'craftable': ['craft'],
+                'repairable': ['repair'],
+            }
+            
+            actions = interaction_action_map.get(interaction_type, [])
+            for action_type in actions:
+                action_text = action_text_map.get(action_type, action_type)
+                object_actions.append({
+                    "action_id": f"{action_type}_object_{object_id}",
+                    "action_type": action_type,
+                    "text": f"{object_name} {action_text}",
+                    "target_id": object_id,
+                    "target_name": object_name,
+                    "target_type": "object",
+                })
+        
+        # properties 기반 추가 액션 생성
+        # contents가 있는 경우 pickup 액션
+        contents = properties.get('contents', [])
+        if contents and len(contents) > 0:
+            # 이미 pickup 액션이 있는지 확인
+            has_pickup = any(a.get('action_type') == 'pickup' for a in object_actions)
+            if not has_pickup:
+                object_actions.append({
+                    "action_id": f"pickup_object_{object_id}",
+                    "action_type": "pickup",
+                    "text": f"{object_name}에서 아이템 획득",
+                    "target_id": object_id,
+                    "target_name": object_name,
+                    "target_type": "object",
+                    "description": f"{len(contents)}개의 항목이 있습니다.",
+                })
+    
     async def get_available_actions(self, session_id: str) -> List[Dict[str, Any]]:
         """
         사용 가능한 액션 조회
@@ -383,9 +536,14 @@ class ActionService(BaseGameplayService):
                     interactions = json.loads(interactions)
                 
                 # possible_states 확인 (상태 전이 규칙)
-                possible_states = properties.get('possible_states', [])
+                # possible_states는 최상위 레벨 또는 properties에 있을 수 있음
+                possible_states = obj.get('possible_states', [])
+                if not possible_states:
+                    possible_states = properties.get('possible_states', [])
                 if isinstance(possible_states, str):
                     possible_states = json.loads(possible_states)
+                elif possible_states is None:
+                    possible_states = []
                 
                 # 액션 타입별 텍스트 매핑
                 action_text_map = {
@@ -462,150 +620,26 @@ class ActionService(BaseGameplayService):
                     })
                 
                 # interaction_type 기반 레거시 지원 (interactions가 없는 경우)
-                # 상태 필터링 적용
+                # possible_states와 properties를 기반으로 동적 액션 생성
                 if not interactions:
-                    if interaction_type == 'openable':
-                        # 상태 전이 규칙: closed -> open, open -> closed
-                        if possible_states and current_state:
-                            # closed 상태에서만 open 가능
-                            if current_state in ['closed', None, '']:
-                                # possible_states에 'open'이 있고 전이 가능한지 확인
-                                if 'open' in possible_states:
-                                    can_open = self._can_transition_state(
-                                        current_state=current_state or 'closed',
-                                        target_state='open',
-                                        possible_states=possible_states
-                                    )
-                                    if can_open:
-                                        object_actions.append({
-                                            "action_id": f"open_object_{object_id}",
-                                            "action_type": "open",
-                                            "text": f"{object_name} 열기",
-                                            "target_id": object_id,
-                                            "target_name": object_name,
-                                            "target_type": "object",
-                                        })
-                            # open 상태에서만 close 가능
-                            else:
-                                # possible_states에 'closed'가 있고 전이 가능한지 확인
-                                if 'closed' in possible_states:
-                                    can_close = self._can_transition_state(
-                                        current_state=current_state,
-                                        target_state='closed',
-                                        possible_states=possible_states
-                                    )
-                                    if can_close:
-                                        object_actions.append({
-                                            "action_id": f"close_object_{object_id}",
-                                            "action_type": "close",
-                                            "text": f"{object_name} 닫기",
-                                            "target_id": object_id,
-                                            "target_name": object_name,
-                                            "target_type": "object",
-                                        })
-                        else:
-                            # possible_states가 없으면 기존 로직 사용
-                            if current_state in ['closed', None, '']:
-                                object_actions.append({
-                                    "action_id": f"open_object_{object_id}",
-                                    "action_type": "open",
-                                    "text": f"{object_name} 열기",
-                                    "target_id": object_id,
-                                    "target_name": object_name,
-                                    "target_type": "object",
-                                })
-                            else:
-                                object_actions.append({
-                                    "action_id": f"close_object_{object_id}",
-                                    "action_type": "close",
-                                    "text": f"{object_name} 닫기",
-                                    "target_id": object_id,
-                                    "target_name": object_name,
-                                    "target_type": "object",
-                                })
-                    elif interaction_type == 'lightable':
-                        # 상태 전이 규칙: unlit -> lit, lit -> unlit
-                        if possible_states and current_state:
-                            # unlit 상태에서만 light 가능
-                            if current_state in ['unlit', None, '']:
-                                # possible_states에 'lit'이 있고 전이 가능한지 확인
-                                if 'lit' in possible_states:
-                                    can_light = self._can_transition_state(
-                                        current_state=current_state or 'unlit',
-                                        target_state='lit',
-                                        possible_states=possible_states
-                                    )
-                                    if can_light:
-                                        object_actions.append({
-                                            "action_id": f"light_object_{object_id}",
-                                            "action_type": "light",
-                                            "text": f"{object_name} 불 켜기",
-                                            "target_id": object_id,
-                                            "target_name": object_name,
-                                            "target_type": "object",
-                                        })
-                            # lit 상태에서만 extinguish 가능
-                            else:
-                                # possible_states에 'unlit'이 있고 전이 가능한지 확인
-                                if 'unlit' in possible_states:
-                                    can_extinguish = self._can_transition_state(
-                                        current_state=current_state,
-                                        target_state='unlit',
-                                        possible_states=possible_states
-                                    )
-                                    if can_extinguish:
-                                        object_actions.append({
-                                            "action_id": f"extinguish_object_{object_id}",
-                                            "action_type": "extinguish",
-                                            "text": f"{object_name} 불 끄기",
-                                            "target_id": object_id,
-                                            "target_name": object_name,
-                                            "target_type": "object",
-                                        })
-                        else:
-                            # possible_states가 없으면 기존 로직 사용
-                            if current_state in ['unlit', None, '']:
-                                object_actions.append({
-                                    "action_id": f"light_object_{object_id}",
-                                    "action_type": "light",
-                                    "text": f"{object_name} 불 켜기",
-                                    "target_id": object_id,
-                                    "target_name": object_name,
-                                    "target_type": "object",
-                                })
-                            else:
-                                object_actions.append({
-                                    "action_id": f"extinguish_object_{object_id}",
-                                    "action_type": "extinguish",
-                                    "text": f"{object_name} 불 끄기",
-                                    "target_id": object_id,
-                                    "target_name": object_name,
-                                    "target_type": "object",
-                                })
-                    elif interaction_type in ['restable', 'rest']:
-                        # rest는 상태 필터링 없이 항상 가능 (상태 변경 없음)
-                        object_actions.append({
-                            "action_id": f"rest_object_{object_id}",
-                            "action_type": "rest",
-                            "text": f"{object_name}에서 쉬기",
-                            "target_id": object_id,
-                            "target_name": object_name,
-                            "target_type": "object",
-                        })
-                    elif interaction_type in ['sitable', 'sit']:
-                        # sit은 상태 필터링 없이 항상 가능 (상태 변경 없음)
-                        object_actions.append({
-                            "action_id": f"sit_object_{object_id}",
-                            "action_type": "sit",
-                            "text": f"{object_name}에 앉기",
-                            "target_id": object_id,
-                            "target_name": object_name,
-                            "target_type": "object",
-                        })
+                    # interaction_type과 possible_states를 기반으로 동적 액션 생성
+                    self._generate_actions_from_interaction_type(
+                        object_actions=object_actions,
+                        object_id=object_id,
+                        object_name=object_name,
+                        interaction_type=interaction_type,
+                        current_state=current_state,
+                        possible_states=possible_states,
+                        properties=properties
+                    )
                 
                 # contents가 있는 경우 줍기 액션 (interactions에 정의되지 않은 경우)
+                # _generate_actions_from_interaction_type에서 이미 처리되지만, 중복 방지를 위해 확인
                 contents = properties.get('contents', [])
-                if contents and len(contents) > 0 and 'pickup' not in interactions:
+                if contents and len(contents) > 0:
+                    # 이미 pickup 액션이 있는지 확인
+                    has_pickup = any(a.get('action_type') == 'pickup' for a in object_actions)
+                    if not has_pickup and 'pickup' not in interactions:
                     object_actions.append({
                         "action_id": f"pickup_object_{object_id}",
                         "action_type": "pickup",

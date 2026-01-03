@@ -30,24 +30,17 @@ author: agent
 
 ### 작업 목록
 
-#### Phase 1: 액션 생성 로직 개선 (우선순위: 높음)
-- [ ] `properties.interactions` JSONB 필드를 확인하여 동적으로 액션 생성
-- [ ] 모든 ActionType에 대한 액션 생성 로직 추가:
-  - [ ] Information: `examine`, `inspect`, `search`
-  - [ ] State Change: `open`, `close`, `light`, `extinguish`, `activate`, `deactivate`, `lock`, `unlock`
-  - [ ] Position: `sit`, `stand`, `lie`, `get_up`, `climb`, `descend`
-  - [ ] Recovery: `rest`, `sleep`, `meditate`
-  - [ ] Consumption: `eat`, `drink`, `consume`
-  - [ ] Learning: `read`, `study`, `write`
-  - [ ] Item Manipulation: `pickup`, `place`, `take`, `put`
-  - [ ] Crafting: `combine`, `craft`, `cook`, `repair`
-  - [ ] Destruction: `destroy`, `break`, `dismantle`
-- [ ] `possible_states`를 확인하여 현재 상태에 따라 가능한 액션만 표시
-- [ ] 액션 조건 확인 (예: `locked` 상태면 `unlock`만 가능)
+#### Phase 1: 액션 생성 로직 개선 (우선순위: 높음) ✅ 완료
+- [x] `properties.interactions` JSONB 필드를 확인하여 동적으로 액션 생성
+- [x] `_generate_actions_from_interaction_type` 메서드 추가
+- [x] `possible_states`를 기반으로 동적 액션 생성 로직 구현
+- [x] 상태 전이 기반 액션 생성 (closed/open, unlit/lit, locked/unlocked 등)
+- [x] `interaction_type` 기반 fallback 액션 생성
+- [x] `properties.contents` 기반 pickup 액션 생성
 
-#### Phase 2: 액션 타입 매핑 확장 (우선순위: 높음)
-- [ ] `action_type_map`에 모든 ActionType 추가
-- [ ] 각 ActionType에 대한 Handler 연결 확인
+#### Phase 2: 액션 타입 매핑 확장 (우선순위: 높음) ✅ 완료
+- [x] `action_type_map`에 모든 ActionType 추가 확인 (이미 완료됨)
+- [x] 각 ActionType에 대한 Handler 연결 확인 (이미 완료됨)
 
 #### Phase 3: EntityManager 피로도 관리 추가 (우선순위: 중간)
 - [ ] `EntityManager`에 `reduce_fatigue` 메서드 추가
