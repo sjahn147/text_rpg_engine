@@ -4,6 +4,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { List as FixedSizeList } from 'react-window';
 import { gameApi } from '../../services/gameApi';
 
 interface ObjectInventoryModalProps {
@@ -93,8 +94,33 @@ export const ObjectInventoryModal: React.FC<ObjectInventoryModalProps> = ({
                 <div className="text-black/60 text-sm py-4 text-center">
                   내용물이 없습니다.
                 </div>
+              ) : contents.length > 10 ? (
+                // 큰 리스트는 가상화 사용
+                <div style={{ height: Math.min(240, contents.length * 48) }}>
+                  <FixedSizeList
+                    height={Math.min(240, contents.length * 48)}
+                    itemCount={contents.length}
+                    itemSize={48}
+                    width="100%"
+                  >
+                    {({ index, style }) => {
+                      const item = contents[index];
+                      return (
+                        <div style={style} className="px-2">
+                          <button
+                            onClick={() => handleItemClick(item.item_id)}
+                            className="w-full p-3 bg-black/5 rounded text-sm text-black/80 hover:bg-black/10 transition-colors text-left"
+                          >
+                            {item.name || item.item_id}
+                          </button>
+                        </div>
+                      );
+                    }}
+                  </FixedSizeList>
+                </div>
               ) : (
-                <div className="space-y-2 max-h-60 overflow-y-auto">
+                // 작은 리스트는 일반 렌더링
+                <div className="space-y-2">
                   {contents.map((item) => (
                     <button
                       key={item.item_id}

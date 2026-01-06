@@ -1,55 +1,56 @@
-/**
+﻿/**
  * MenuBar 컴포넌트 테스트
  * 모든 메뉴 항목이 올바르게 작동하는지 확인
  */
 import React from 'react';
+import { vi, describe, test, expect, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { MenuBar } from './MenuBar';
 
 // Mock 함수들
 const mockHandlers = {
-  onToolChange: jest.fn(),
-  onNewProject: jest.fn(),
-  onOpenProject: jest.fn(),
-  onSaveProject: jest.fn(),
-  onSaveProjectAs: jest.fn(),
-  onImport: jest.fn(),
-  onExport: jest.fn(),
-  onUndo: jest.fn(),
-  onRedo: jest.fn(),
-  onCut: jest.fn(),
-  onCopy: jest.fn(),
-  onPaste: jest.fn(),
-  onDuplicate: jest.fn(),
-  onDelete: jest.fn(),
-  onSelectAll: jest.fn(),
-  onDeselectAll: jest.fn(),
-  onFind: jest.fn(),
-  onFindInFiles: jest.fn(),
-  onReplace: jest.fn(),
-  onPreferences: jest.fn(),
-  onTogglePanel: jest.fn(),
-  onViewMode: jest.fn(),
-  onZoom: jest.fn(),
-  onGridToggle: jest.fn(),
-  onGridSettings: jest.fn(),
-  onFullscreen: jest.fn(),
-  onNewEntity: jest.fn(),
-  onEntityProperties: jest.fn(),
-  onEntityRelationships: jest.fn(),
-  onBatchOperations: jest.fn(),
-  onValidate: jest.fn(),
-  onLayout: jest.fn(),
-  onDocumentation: jest.fn(),
-  onKeyboardShortcuts: jest.fn(),
-  onAbout: jest.fn(),
-  onKnowledgeManager: jest.fn(),
+  onToolChange: vi.fn(),
+  onNewProject: vi.fn(),
+  onOpenProject: vi.fn(),
+  onSaveProject: vi.fn(),
+  onSaveProjectAs: vi.fn(),
+  onImport: vi.fn(),
+  onExport: vi.fn(),
+  onUndo: vi.fn(),
+  onRedo: vi.fn(),
+  onCut: vi.fn(),
+  onCopy: vi.fn(),
+  onPaste: vi.fn(),
+  onDuplicate: vi.fn(),
+  onDelete: vi.fn(),
+  onSelectAll: vi.fn(),
+  onDeselectAll: vi.fn(),
+  onFind: vi.fn(),
+  onFindInFiles: vi.fn(),
+  onReplace: vi.fn(),
+  onPreferences: vi.fn(),
+  onTogglePanel: vi.fn(),
+  onViewMode: vi.fn(),
+  onZoom: vi.fn(),
+  onGridToggle: vi.fn(),
+  onGridSettings: vi.fn(),
+  onFullscreen: vi.fn(),
+  onNewEntity: vi.fn(),
+  onEntityProperties: vi.fn(),
+  onEntityRelationships: vi.fn(),
+  onBatchOperations: vi.fn(),
+  onValidate: vi.fn(),
+  onLayout: vi.fn(),
+  onDocumentation: vi.fn(),
+  onKeyboardShortcuts: vi.fn(),
+  onAbout: vi.fn(),
+  onKnowledgeManager: vi.fn(),
 };
 
 describe('MenuBar 컴포넌트 테스트', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   const renderMenuBar = (props = {}) => {
@@ -67,22 +68,22 @@ describe('MenuBar 컴포넌트 테스트', () => {
     );
   };
 
-  describe('툴바 버튼 테스트', () => {
-    test('선택 툴 버튼 클릭 시 onToolChange 호출', () => {
+  describe('도구 버튼 테스트', () => {
+    test('선택 도구 버튼 클릭 시 onToolChange 호출', () => {
       renderMenuBar();
       const selectButton = screen.getByTitle('선택 (V)');
       fireEvent.click(selectButton);
       expect(mockHandlers.onToolChange).toHaveBeenCalledWith('select');
     });
 
-    test('핀 툴 버튼 클릭 시 onToolChange 호출', () => {
+    test('핀 도구 버튼 클릭 시 onToolChange 호출', () => {
       renderMenuBar();
       const pinButton = screen.getByTitle('핀 추가 (P)');
       fireEvent.click(pinButton);
       expect(mockHandlers.onToolChange).toHaveBeenCalledWith('pin');
     });
 
-    test('도로 툴 버튼 클릭 시 onToolChange 호출', () => {
+    test('도로 도구 버튼 클릭 시 onToolChange 호출', () => {
       renderMenuBar();
       const roadButton = screen.getByTitle('도로 그리기 (R)');
       fireEvent.click(roadButton);
@@ -101,7 +102,7 @@ describe('MenuBar 컴포넌트 테스트', () => {
       });
     });
 
-    test('백업 저장 클릭 시 onSaveProject 호출', async () => {
+    test('프로젝트 저장 클릭 시 onSaveProject 호출', async () => {
       renderMenuBar();
       const fileMenu = screen.getByText('File');
       fireEvent.click(fileMenu);
@@ -113,7 +114,7 @@ describe('MenuBar 컴포넌트 테스트', () => {
       });
     });
 
-    test('백업 복원 클릭 시 onOpenProject 호출', async () => {
+    test('프로젝트 복원 클릭 시 onOpenProject 호출', async () => {
       renderMenuBar();
       const fileMenu = screen.getByText('File');
       fireEvent.click(fileMenu);
@@ -702,31 +703,31 @@ describe('MenuBar 컴포넌트 테스트', () => {
     });
   });
 
-  describe('줌 컨트롤 테스트', () => {
-    test('줌 인 버튼 클릭 시 onZoom 호출', () => {
+  describe('툴바 버튼 테스트', () => {
+    test('줌인 버튼 클릭 시 onZoom 호출', () => {
       renderMenuBar();
       const zoomInButton = screen.getByTitle('확대 (Ctrl+=)');
       fireEvent.click(zoomInButton);
       expect(mockHandlers.onZoom).toHaveBeenCalledWith('in');
     });
 
-    test('줌 아웃 버튼 클릭 시 onZoom 호출', () => {
+    test('줌아웃 버튼 클릭 시 onZoom 호출', () => {
       renderMenuBar();
       const zoomOutButton = screen.getByTitle('축소 (Ctrl+-)');
       fireEvent.click(zoomOutButton);
       expect(mockHandlers.onZoom).toHaveBeenCalledWith('out');
     });
 
-    test('그리드 토글 버튼 클릭 시 onGridToggle 호출', () => {
+    test('그리드 표시 버튼 클릭 시 onGridToggle 호출', () => {
       renderMenuBar();
-      const gridButton = screen.getByTitle('그리드 토글 (Ctrl+G)');
+      const gridButton = screen.getByTitle('그리드 표시 (Ctrl+G)');
       fireEvent.click(gridButton);
       expect(mockHandlers.onGridToggle).toHaveBeenCalled();
     });
   });
 
   describe('비활성화 상태 테스트', () => {
-    test('canUndo가 false일 때 Undo 버튼 존재 확인', async () => {
+    test('canUndo가 false이면 Undo 버튼 비활성화', async () => {
       renderMenuBar({ canUndo: false });
       const editMenu = screen.getByText('Edit');
       fireEvent.click(editMenu);
@@ -734,13 +735,13 @@ describe('MenuBar 컴포넌트 테스트', () => {
       await waitFor(() => {
         const undoButton = screen.getByText('Undo');
         expect(undoButton).toBeInTheDocument();
-        // 비활성화된 버튼은 클릭해도 핸들러가 호출되지 않아야 함
+        // 비활성화된 버튼은 클릭해도 호출되지 않아야 함
         fireEvent.click(undoButton);
         expect(mockHandlers.onUndo).not.toHaveBeenCalled();
       });
     });
 
-    test('hasSelection이 false일 때 Cut 버튼 존재 확인', async () => {
+    test('hasSelection이 false이면 Cut 버튼 비활성화', async () => {
       renderMenuBar({ hasSelection: false });
       const editMenu = screen.getByText('Edit');
       fireEvent.click(editMenu);
@@ -748,13 +749,13 @@ describe('MenuBar 컴포넌트 테스트', () => {
       await waitFor(() => {
         const cutButton = screen.getByText('Cut');
         expect(cutButton).toBeInTheDocument();
-        // 비활성화된 버튼은 클릭해도 핸들러가 호출되지 않아야 함
+        // 비활성화된 버튼은 클릭해도 호출되지 않아야 함
         fireEvent.click(cutButton);
         expect(mockHandlers.onCut).not.toHaveBeenCalled();
       });
     });
 
-    test('hasSelection이 false일 때 Entity Properties 버튼 존재 확인', async () => {
+    test('hasSelection이 false이면 Entity Properties 버튼 비활성화', async () => {
       renderMenuBar({ hasSelection: false });
       const entityMenu = screen.getByText('Entity');
       fireEvent.click(entityMenu);
@@ -762,11 +763,10 @@ describe('MenuBar 컴포넌트 테스트', () => {
       await waitFor(() => {
         const propertiesButton = screen.getByText('Entity Properties...');
         expect(propertiesButton).toBeInTheDocument();
-        // 비활성화된 버튼은 클릭해도 핸들러가 호출되지 않아야 함
+        // 비활성화된 버튼은 클릭해도 호출되지 않아야 함
         fireEvent.click(propertiesButton);
         expect(mockHandlers.onEntityProperties).not.toHaveBeenCalled();
       });
     });
   });
 });
-

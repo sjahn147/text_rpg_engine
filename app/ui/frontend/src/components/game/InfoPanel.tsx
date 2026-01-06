@@ -2,8 +2,9 @@
  * 정보 패널 컴포넌트 (인벤토리, 시간, 저널, 지도 등)
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { List as FixedSizeList } from 'react-window';
 import { useGameStore } from '../../store/gameStore';
 import { gameApi } from '../../services/gameApi';
 import { CombineModal } from './CombineModal';
@@ -120,13 +121,38 @@ export const InfoPanel: React.FC<InfoPanelProps> = ({ isOpen, onClose }) => {
                           조합
                         </button>
                       </div>
-                      <div className="space-y-2">
-                        {inventory.length === 0 ? (
-                          <div className="text-black/60 text-sm py-4 text-center">
-                            아이템이 없습니다.
-                          </div>
-                        ) : (
-                          inventory.map((item) => (
+                      {inventory.length === 0 ? (
+                        <div className="text-black/60 text-sm py-4 text-center">
+                          아이템이 없습니다.
+                        </div>
+                      ) : inventory.length > 10 ? (
+                        // 큰 리스트는 가상화 사용
+                        <div style={{ height: Math.min(400, inventory.length * 60) }}>
+                          <FixedSizeList
+                            height={Math.min(400, inventory.length * 60)}
+                            itemCount={inventory.length}
+                            itemSize={60}
+                            width="100%"
+                          >
+                            {({ index, style }) => {
+                              const item = inventory[index];
+                              return (
+                                <div style={style} className="px-2">
+                                  <div className="p-3 bg-black/5 rounded text-sm text-black/80">
+                                    <div className="flex items-center justify-between">
+                                      <span>{item.name || item.item_id}</span>
+                                      <span className="text-black/60">x{item.quantity}</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            }}
+                          </FixedSizeList>
+                        </div>
+                      ) : (
+                        // 작은 리스트는 일반 렌더링
+                        <div className="space-y-2">
+                          {inventory.map((item) => (
                             <div
                               key={item.item_id}
                               className="p-3 bg-black/5 rounded text-sm text-black/80"
@@ -136,9 +162,9 @@ export const InfoPanel: React.FC<InfoPanelProps> = ({ isOpen, onClose }) => {
                                 <span className="text-black/60">x{item.quantity}</span>
                               </div>
                             </div>
-                          ))
-                        )}
-                      </div>
+                          ))}
+                        </div>
+                      )}
                     </motion.div>
                   )}
 
@@ -168,9 +194,38 @@ export const InfoPanel: React.FC<InfoPanelProps> = ({ isOpen, onClose }) => {
                       exit={{ opacity: 0, y: -10 }}
                     >
                       <h3 className="text-lg font-light text-black/90 mb-4">저널</h3>
-                      <div className="space-y-3">
-                        {history.length > 0 ? (
-                          history.map((entry, index) => (
+                      {history.length === 0 ? (
+                        <p className="text-black/60 text-sm">저널 항목이 없습니다.</p>
+                      ) : history.length > 10 ? (
+                        // 큰 리스트는 가상화 사용
+                        <div style={{ height: Math.min(400, history.length * 80) }}>
+                          <FixedSizeList
+                            height={Math.min(400, history.length * 80)}
+                            itemCount={history.length}
+                            itemSize={80}
+                            width="100%"
+                          >
+                            {({ index, style }) => {
+                              const entry = history[index];
+                              return (
+                                <div style={style} className="px-2">
+                                  <div className="text-sm text-black/70 border-b border-black/5 pb-2">
+                                    {entry.characterName && (
+                                      <div className="font-medium text-black/80 mb-1">
+                                        {entry.characterName}
+                                      </div>
+                                    )}
+                                    <div className="text-black/60">{entry.text}</div>
+                                  </div>
+                                </div>
+                              );
+                            }}
+                          </FixedSizeList>
+                        </div>
+                      ) : (
+                        // 작은 리스트는 일반 렌더링
+                        <div className="space-y-3">
+                          {history.map((entry, index) => (
                             <div key={index} className="text-sm text-black/70 border-b border-black/5 pb-2">
                               {entry.characterName && (
                                 <div className="font-medium text-black/80 mb-1">
@@ -179,11 +234,9 @@ export const InfoPanel: React.FC<InfoPanelProps> = ({ isOpen, onClose }) => {
                               )}
                               <div className="text-black/60">{entry.text}</div>
                             </div>
-                          ))
-                        ) : (
-                          <p className="text-black/60 text-sm">저널 항목이 없습니다.</p>
-                        )}
-                      </div>
+                          ))}
+                        </div>
+                      )}
                     </motion.div>
                   )}
 
